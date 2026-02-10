@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Calendar, ChevronRight, CheckCircle, Loader2, FileText, AlignLeft } from 'lucide-react';
+import { X, Calendar, ChevronRight, CheckCircle, Loader2, FileText } from 'lucide-react';
 import { EXPENSE_CATEGORIES } from '../constants';
 import * as Icons from 'lucide-react';
 import { api } from '../api';

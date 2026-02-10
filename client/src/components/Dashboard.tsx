@@ -12,7 +12,6 @@ import {
     DollarSign, 
     Music, 
     Zap, 
-    ArrowRight,
     Loader2,
     X,
     Check
