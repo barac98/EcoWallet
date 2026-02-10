@@ -1,65 +1,70 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ChevronRight, ChevronLeft, Edit2, TrendingUp, ShoppingBag, Home, DollarSign, Coffee, QrCode, Sliders, Music, Zap, RefreshCw } from 'lucide-react';
-import { Transaction } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { 
+    Bell, 
+    Edit2, 
+    Plus, 
+    ShoppingCart, 
+    PieChart, 
+    ShoppingBag, 
+    Coffee, 
+    Home, 
+    DollarSign, 
+    Music, 
+    Zap, 
+    ArrowRight,
+    Loader2,
+    X,
+    Check
+} from 'lucide-react';
+import { Transaction, ShoppingItem } from '../types';
 import { api } from '../api';
 import { useUser } from '../UserContext';
 
-const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
-    const getIcon = (iconName: string) => {
-        switch (iconName) {
-            case 'Coffee': return <Coffee size={20} />;
-            case 'ShoppingBag': return <ShoppingBag size={20} />;
-            case 'Home': return <Home size={20} />;
-            case 'DollarSign': return <DollarSign size={20} />;
-            case 'Music': return <Music size={20} />;
-            default: return <Zap size={20} />;
-        }
-    };
+// --- Icon Helper ---
+const getIcon = (iconName: string) => {
+    switch (iconName) {
+        case 'Coffee': return <Coffee size={24} />;
+        case 'ShoppingBag': return <ShoppingBag size={24} />;
+        case 'Home': return <Home size={24} />;
+        case 'DollarSign': return <DollarSign size={24} />;
+        case 'Music': return <Music size={24} />;
+        default: return <Zap size={24} />;
+    }
+};
 
-    const getColor = (category: string) => {
-        if (category === 'Groceries') return 'bg-orange-100 dark:bg-orange-900/30 text-orange-500';
-        if (category === 'Income') return 'bg-primary/20 dark:bg-primary/10 text-primary';
-        if (category === 'Food & Drinks') return 'bg-purple-100 dark:bg-purple-900/30 text-purple-500';
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-500';
-    };
-
-    return (
-        <div className="flex items-center justify-between p-4 bg-white dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-white/5 shadow-sm relative overflow-hidden">
-             {/* User Indicator */}
-             {transaction.createdBy && (
-                <div className="absolute top-0 right-0 bg-slate-200 dark:bg-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded-bl-lg text-slate-600 dark:text-slate-300">
-                    {transaction.createdBy}
-                </div>
-            )}
-            
-            <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getColor(transaction.category)}`}>
-                    {getIcon(transaction.icon)}
-                </div>
-                <div>
-                    <div className="flex items-center gap-2">
-                        <p className="font-bold text-slate-900 dark:text-white">{transaction.title}</p>
-                    </div>
-                    <p className="text-xs text-slate-400">{new Date(transaction.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-            </div>
-            <span className={`font-bold ${transaction.type === 'income' ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
-                {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
-            </span>
-        </div>
-    );
+const getCategoryColor = (category: string) => {
+    switch (category) {
+        case 'Groceries': return 'bg-emerald-500/20 text-emerald-500';
+        case 'Food & Drinks': return 'bg-orange-500/20 text-orange-500';
+        case 'Entertainment': return 'bg-purple-500/20 text-purple-500';
+        case 'Income': return 'bg-primary/20 text-primary';
+        default: return 'bg-blue-500/20 text-blue-500';
+    }
 };
 
 export const Dashboard = () => {
-    const { user, logout } = useUser();
+    const { user } = useUser();
+    const navigate = useNavigate();
+    
+    // Data State
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentDate, setCurrentDate] = useState(new Date());
+    
+    // UI State
+    const [showIncomeModal, setShowIncomeModal] = useState(false);
+    const [newIncomeAmount, setNewIncomeAmount] = useState('');
 
+    // --- Data Loading ---
     const loadData = async () => {
         setLoading(true);
-        const data = await api.getTransactions();
-        setTransactions(data);
+        const [txData, shopData] = await Promise.all([
+            api.getTransactions(),
+            api.getShoppingItems()
+        ]);
+        setTransactions(txData);
+        setShoppingItems(shopData);
         setLoading(false);
     };
 
@@ -67,144 +72,280 @@ export const Dashboard = () => {
         loadData();
     }, []);
 
-    const changeMonth = (offset: number) => {
-        setCurrentDate(prev => {
-            const d = new Date(prev);
-            d.setDate(1); // Set to 1st to avoid month overflow issues (e.g. Oct 31 -> Sept)
-            d.setMonth(d.getMonth() + offset);
-            return d;
-        });
-    };
+    // --- Calculations ---
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
 
-    // Filter transactions by selected month
-    const filteredTransactions = useMemo(() => {
+    const monthlyTransactions = useMemo(() => {
         return transactions.filter(t => {
-            const tDate = new Date(t.date);
-            return tDate.getMonth() === currentDate.getMonth() &&
-                   tDate.getFullYear() === currentDate.getFullYear();
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions, currentDate]);
+            const d = new Date(t.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        });
+    }, [transactions, currentMonth, currentYear]);
 
-    // Derived State for UI
-    const totalIncome = filteredTransactions
+    const totalIncome = monthlyTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
-    
-    const totalExpense = filteredTransactions
+
+    const totalExpense = monthlyTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    return (
-        <div className="px-6 pt-4 space-y-6">
-            {/* Header */}
-            <header className="flex items-center justify-between">
-                {/* User Badge - Click to Logout */}
-                <button 
-                    onClick={() => {
-                        if(confirm(`Switch user from ${user}?`)) logout();
-                    }}
-                    className="flex items-center gap-2 bg-white dark:bg-surface-dark pl-1 pr-3 py-1 rounded-full shadow-sm border border-slate-100 dark:border-white/5 active:bg-slate-50 dark:active:bg-white/10"
-                >
-                    <div className="w-8 h-8 rounded-full bg-primary text-background-dark font-bold flex items-center justify-center text-sm">
-                        {user ? user[0].toUpperCase() : '?'}
-                    </div>
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{user}</span>
-                </button>
+    const remainingBalance = totalIncome - totalExpense;
+    const spendPercentage = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 100) : 0;
 
-                {/* Month Navigator */}
-                <div className="flex flex-col items-center">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Timeline</span>
-                    <div className="flex items-center gap-1 bg-slate-200 dark:bg-white/5 rounded-full p-1 pl-2 pr-2">
-                        <button 
-                            onClick={() => changeMonth(-1)}
-                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95"
-                        >
-                            <ChevronLeft size={16} className="text-slate-600 dark:text-slate-300" />
-                        </button>
-                        <span className="text-sm font-bold dark:text-white min-w-[100px] text-center">
-                            {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </span>
-                        <button 
-                            onClick={() => changeMonth(1)}
-                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95"
-                        >
-                            <ChevronRight size={16} className="text-slate-600 dark:text-slate-300" />
-                        </button>
+    const pendingShoppingCount = shoppingItems.filter(i => !i.isPurchased).length;
+    const totalShoppingCount = shoppingItems.length;
+    const shoppingProgress = totalShoppingCount > 0 
+        ? ((totalShoppingCount - pendingShoppingCount) / totalShoppingCount) * 100 
+        : 0;
+
+    // --- Greeting Logic ---
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 18) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    // --- Handlers ---
+    const handleAddIncome = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const amount = parseFloat(newIncomeAmount);
+        if (!amount || amount <= 0) return;
+
+        await api.addTransaction({
+            title: 'Monthly Income',
+            amount: amount,
+            category: 'Income',
+            date: new Date().toISOString(),
+            type: 'income',
+            icon: 'DollarSign'
+        });
+
+        setShowIncomeModal(false);
+        setNewIncomeAmount('');
+        loadData();
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background-dark flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" size={32} />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-background-dark text-white pb-32 font-sans">
+            
+            {/* 1. Header Section */}
+            <header className="px-6 pt-8 pb-6 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-surface-card border border-white/10 flex items-center justify-center text-primary font-bold shadow-lg">
+                        {user ? user[0].toUpperCase() : 'U'}
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">{getGreeting()},</p>
+                        <h1 className="text-xl font-bold">{user || 'Guest'}</h1>
                     </div>
                 </div>
-
-                {/* Refresh Button */}
-                <button onClick={loadData} className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-sm dark:text-white active:rotate-180 transition-transform">
-                    {loading ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
+                <button className="w-10 h-10 rounded-full bg-surface-card border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                    <Bell size={20} />
                 </button>
             </header>
 
-            {/* Income Card */}
-            <section className="bg-white dark:bg-surface-dark p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5">
-                <div className="flex justify-between items-start mb-2">
-                    <h2 className="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Income</h2>
-                    <button className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
-                        <Edit2 size={16} />
-                    </button>
-                </div>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">${totalIncome.toLocaleString()}</span>
-                    <span className="text-slate-400 font-medium">.00</span>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 w-fit px-3 py-1 rounded-full">
-                    <TrendingUp size={14} />
-                    <span>Calculated for {currentDate.toLocaleDateString('en-US', { month: 'short' })}</span>
-                </div>
-            </section>
+            <main className="px-6 space-y-6">
+                
+                {/* 2. Income & Balance Cards */}
+                <div className="grid gap-4">
+                    {/* Income Card */}
+                    <div className="bg-surface-card rounded-3xl p-6 border border-white/5 relative overflow-hidden group">
+                        <div className="flex justify-between items-start mb-2 relative z-10">
+                            <span className="text-slate-400 text-sm font-medium">Total Monthly Income</span>
+                            <button 
+                                onClick={() => setShowIncomeModal(true)}
+                                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-background-dark transition-all"
+                            >
+                                <Edit2 size={14} />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 relative z-10">
+                            <h2 className="text-3xl font-bold tracking-tight">${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">+12%</span>
+                        </div>
+                        
+                        {/* Decorative background glow */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                    </div>
 
-            {/* Spending Progress */}
-            <section className="bg-slate-900 dark:bg-black p-6 rounded-2xl shadow-lg border border-slate-800 relative overflow-hidden text-white">
-                <div className="relative z-10">
-                    <div className="flex justify-between items-end mb-4">
-                        <div>
-                            <h3 className="text-slate-400 text-sm font-medium mb-1">Spent vs. Income</h3>
-                            <p className="text-2xl font-bold tracking-tight text-primary">${totalExpense.toLocaleString()} <span className="text-slate-500 font-normal">/ ${totalIncome.toLocaleString()}</span></p>
+                    {/* Balance Card */}
+                    <div className="bg-black rounded-3xl p-6 border border-white/10 shadow-2xl relative overflow-hidden">
+                        <div className="mb-6 relative z-10">
+                            <span className="text-slate-400 text-sm font-medium">Remaining Balance</span>
+                            <h2 className="text-4xl font-bold tracking-tight mt-1 text-white">${remainingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+                        </div>
+                        
+                        <div className="space-y-2 relative z-10">
+                            <div className="flex justify-between text-xs font-bold tracking-wider uppercase">
+                                <span className="text-primary">Spending Progress</span>
+                                <span className="text-slate-400">{Math.round(spendPercentage)}% Used</span>
+                            </div>
+                            <div className="h-3 w-full bg-surface-card rounded-full overflow-hidden border border-white/5">
+                                <div 
+                                    className="h-full bg-primary rounded-full shadow-[0_0_10px_rgba(19,236,91,0.5)] transition-all duration-700 ease-out"
+                                    style={{ width: `${spendPercentage}%` }}
+                                ></div>
+                            </div>
                         </div>
                     </div>
-                    <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_15px_rgba(19,236,91,0.4)]" 
-                            style={{ width: `${Math.min((totalExpense / (totalIncome || 1)) * 100, 100)}%` }}
-                        ></div>
+                </div>
+
+                {/* 3. Action Buttons */}
+                <div className="grid grid-cols-3 gap-4">
+                    <button 
+                        onClick={() => navigate('/add')}
+                        className="flex flex-col items-center gap-2 group"
+                    >
+                        <div className="w-16 h-16 rounded-[2rem] bg-primary flex items-center justify-center text-background-dark shadow-lg shadow-primary/20 group-active:scale-95 transition-transform">
+                            <Plus size={32} strokeWidth={2.5} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-300">Expense</span>
+                    </button>
+
+                    <button 
+                        onClick={() => navigate('/shopping')}
+                        className="flex flex-col items-center gap-2 group"
+                    >
+                        <div className="w-16 h-16 rounded-[2rem] bg-surface-card border border-white/10 flex items-center justify-center text-white group-active:scale-95 transition-transform">
+                            <ShoppingCart size={28} strokeWidth={1.5} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-300">Shopping</span>
+                    </button>
+
+                    <button 
+                        onClick={() => navigate('/history')}
+                        className="flex flex-col items-center gap-2 group"
+                    >
+                        <div className="w-16 h-16 rounded-[2rem] bg-surface-card border border-white/10 flex items-center justify-center text-white group-active:scale-95 transition-transform">
+                            <PieChart size={28} strokeWidth={1.5} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-300">Analytics</span>
+                    </button>
+                </div>
+
+                {/* 4. Recent Transactions */}
+                <div>
+                    <div className="flex justify-between items-center mb-4 px-1">
+                        <h3 className="text-lg font-bold">Recent Transactions</h3>
+                        <button onClick={() => navigate('/history')} className="text-primary text-sm font-bold hover:underline">See All</button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        {transactions.slice(0, 3).map(t => (
+                            <div key={t.id} className="bg-surface-card border border-white/5 p-4 rounded-3xl flex items-center justify-between group active:scale-[0.99] transition-transform">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${getCategoryColor(t.category)}`}>
+                                        {getIcon(t.icon)}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">{t.title}</h4>
+                                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                                            <span>{t.category}</span>
+                                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                                            <span>{new Date(t.date).toLocaleDateString([], { weekday: 'short' })}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className={`font-bold ${t.type === 'income' ? 'text-primary' : 'text-white'}`}>
+                                    {t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}
+                                </span>
+                            </div>
+                        ))}
+                        {transactions.length === 0 && (
+                            <div className="text-center py-8 text-slate-500 text-sm bg-surface-card rounded-3xl border border-white/5">
+                                No recent activity
+                            </div>
+                        )}
                     </div>
                 </div>
-            </section>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-4">
-                <button className="bg-white dark:bg-surface-dark p-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
-                    <QrCode className="text-slate-900 dark:text-white" size={20} />
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Scan</span>
-                </button>
-                <button className="bg-white dark:bg-surface-dark p-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
-                    <Sliders className="text-slate-900 dark:text-white" size={20} />
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Limits</span>
-                </button>
-            </div>
+                {/* 5. Shopping Summary Card */}
+                <div 
+                    onClick={() => navigate('/shopping')}
+                    className="bg-[#1a237e] rounded-3xl p-5 border border-white/10 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform relative overflow-hidden"
+                >
+                    {/* Background decoration */}
+                    <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/20 rounded-full blur-xl"></div>
+                    
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                            <ShoppingBag size={20} fill="currentColor" />
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-0.5">Shopping Summary</h4>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-xl font-bold text-white">
+                                    {pendingShoppingCount > 0 ? `${pendingShoppingCount} Items Pending` : 'All Done!'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
 
-            {/* Recent Activity */}
-            <section className="pb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity ({currentDate.toLocaleDateString('en-US', { month: 'short' })})</h3>
-                    <button className="text-sm font-semibold text-primary">See All</button>
+                    <div className="relative z-10 text-right">
+                        <span className="text-xs font-bold text-blue-300 block mb-1">{Math.round(shoppingProgress)}% Goal</span>
+                         {/* Circular Progress (Simplified visual) */}
+                         <div className="w-8 h-1 bg-blue-900/50 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${shoppingProgress}%` }}></div>
+                         </div>
+                    </div>
                 </div>
-                <div className="space-y-3">
-                    {loading ? (
-                        <p className="text-slate-400 text-center text-sm py-4">Loading transactions...</p>
-                    ) : filteredTransactions.length === 0 ? (
-                        <p className="text-slate-400 text-center text-sm py-4">No transactions for {currentDate.toLocaleDateString('en-US', { month: 'long' })}.</p>
-                    ) : (
-                        filteredTransactions.map(t => (
-                            <TransactionItem key={t.id} transaction={t} />
-                        ))
-                    )}
+
+            </main>
+
+            {/* --- Edit Income Modal --- */}
+            {showIncomeModal && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
+                    <div className="bg-surface-card w-full max-w-sm rounded-3xl p-6 border border-white/10 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white">Update Income</h2>
+                            <button 
+                                onClick={() => setShowIncomeModal(false)}
+                                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleAddIncome}>
+                            <div className="mb-6">
+                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Add Income Amount</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-primary">$</span>
+                                    <input 
+                                        type="number" 
+                                        value={newIncomeAmount}
+                                        onChange={(e) => setNewIncomeAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        autoFocus
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-10 pr-4 text-2xl font-bold text-white placeholder-slate-600 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2 ml-1">This will be added as a new transaction.</p>
+                            </div>
+
+                            <button 
+                                type="submit"
+                                disabled={!newIncomeAmount}
+                                className="w-full bg-primary text-background-dark font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 hover:bg-primary-dark"
+                            >
+                                <Check size={20} />
+                                Confirm Income
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            </section>
+            )}
         </div>
     );
 };

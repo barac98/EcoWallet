@@ -15,11 +15,12 @@ export default {
         'primary-dark': '#0fa842',
         background: {
             light: '#f6f8f6',
-            dark: '#102216',
+            dark: '#0a1610', // Deepened for contrast
+            card: '#112218', // Card background from image
         },
         surface: {
             light: '#ffffff',
-            dark: '#1c2e22',
+            dark: '#15281e',
         }
       }
     },
