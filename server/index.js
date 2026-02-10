@@ -105,18 +105,9 @@ const updateDocument = async (collectionName, id, data) => {
     }
 };
 
-const deleteDocument = async (collectionName, id) => {
-    if (db) {
-        await db.collection(collectionName).doc(id).delete();
-    } else {
-        memoryStore[collectionName] = memoryStore[collectionName].filter(item => item.id !== id);
-    }
-    return { success: true };
-};
-
 // --- Routes ---
 
-// Transactions
+// 1. Transactions API
 app.get('/api/transactions', async (req, res) => {
     try {
         const transactions = await getCollection('transactions');
@@ -137,7 +128,7 @@ app.post('/api/transactions', async (req, res) => {
     }
 });
 
-// Shopping List
+// 2. Shopping List API
 app.get('/api/shopping', async (req, res) => {
     try {
         const items = await getCollection('shopping');
@@ -156,6 +147,7 @@ app.post('/api/shopping', async (req, res) => {
     }
 });
 
+// Update Item (PATCH) - Used for checking off items or updating quantity
 app.patch('/api/shopping/:id', async (req, res) => {
     try {
         const updated = await updateDocument('shopping', req.params.id, req.body);
@@ -165,20 +157,28 @@ app.patch('/api/shopping/:id', async (req, res) => {
     }
 });
 
+// Clear Purchased Items (DELETE) - Used in "Complete Trip"
 app.delete('/api/shopping/clear-purchased', async (req, res) => {
     try {
         if (db) {
-            // Updated to query for 'isPurchased' instead of 'checked'
+            // Updated to query for 'isPurchased' to match frontend Types
             const snapshot = await db.collection('shopping').where('isPurchased', '==', true).get();
+            
+            if (snapshot.empty) {
+                return res.json({ success: true, count: 0 });
+            }
+
             const batch = db.batch();
             snapshot.docs.forEach((doc) => {
                 batch.delete(doc.ref);
             });
             await batch.commit();
+            res.json({ success: true, count: snapshot.size });
         } else {
+            const initialLength = memoryStore.shopping.length;
             memoryStore.shopping = memoryStore.shopping.filter(i => !i.isPurchased);
+            res.json({ success: true, count: initialLength - memoryStore.shopping.length });
         }
-        res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
