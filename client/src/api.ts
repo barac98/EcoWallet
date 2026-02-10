@@ -1,7 +1,8 @@
 import { Transaction, ShoppingItem } from './types';
 
-// Use relative path so Vite proxy handles it
-const API_URL = '/api';
+// PRODUCTION: Set VITE_API_URL in your static host (e.g., Render) to your backend URL + /api
+// DEVELOPMENT: Falls back to '/api' which Vite proxies to localhost:3001
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 async function fetchWithFallback<T>(endpoint: string, cacheKey: string, options?: RequestInit): Promise<T> {
     try {
