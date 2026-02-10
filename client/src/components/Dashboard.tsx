@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ChevronRight, Edit2, TrendingUp, ShoppingBag, Home, DollarSign, Coffee, QrCode, Sliders, Music, Zap, RefreshCw, LogOut } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { ChevronRight, ChevronLeft, Edit2, TrendingUp, ShoppingBag, Home, DollarSign, Coffee, QrCode, Sliders, Music, Zap, RefreshCw } from 'lucide-react';
 import { Transaction } from '../types';
 import { api } from '../api';
 import { useUser } from '../UserContext';
@@ -54,6 +54,7 @@ export const Dashboard = () => {
     const { user, logout } = useUser();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentDate, setCurrentDate] = useState(new Date());
 
     const loadData = async () => {
         setLoading(true);
@@ -66,12 +67,30 @@ export const Dashboard = () => {
         loadData();
     }, []);
 
+    const changeMonth = (offset: number) => {
+        setCurrentDate(prev => {
+            const d = new Date(prev);
+            d.setDate(1); // Set to 1st to avoid month overflow issues (e.g. Oct 31 -> Sept)
+            d.setMonth(d.getMonth() + offset);
+            return d;
+        });
+    };
+
+    // Filter transactions by selected month
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            const tDate = new Date(t.date);
+            return tDate.getMonth() === currentDate.getMonth() &&
+                   tDate.getFullYear() === currentDate.getFullYear();
+        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [transactions, currentDate]);
+
     // Derived State for UI
-    const totalIncome = transactions
+    const totalIncome = filteredTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
     
-    const totalExpense = transactions
+    const totalExpense = filteredTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
 
@@ -92,14 +111,31 @@ export const Dashboard = () => {
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{user}</span>
                 </button>
 
+                {/* Month Navigator */}
                 <div className="flex flex-col items-center">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Timeline</span>
-                    <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold dark:text-white">Current Month</span>
+                    <div className="flex items-center gap-1 bg-slate-200 dark:bg-white/5 rounded-full p-1 pl-2 pr-2">
+                        <button 
+                            onClick={() => changeMonth(-1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95"
+                        >
+                            <ChevronLeft size={16} className="text-slate-600 dark:text-slate-300" />
+                        </button>
+                        <span className="text-sm font-bold dark:text-white min-w-[100px] text-center">
+                            {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <button 
+                            onClick={() => changeMonth(1)}
+                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95"
+                        >
+                            <ChevronRight size={16} className="text-slate-600 dark:text-slate-300" />
+                        </button>
                     </div>
                 </div>
+
+                {/* Refresh Button */}
                 <button onClick={loadData} className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-sm dark:text-white active:rotate-180 transition-transform">
-                    {loading ? <RefreshCw size={20} className="animate-spin" /> : <ChevronRight size={20} />}
+                    {loading ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
                 </button>
             </header>
 
@@ -117,7 +153,7 @@ export const Dashboard = () => {
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 w-fit px-3 py-1 rounded-full">
                     <TrendingUp size={14} />
-                    <span>Real-time</span>
+                    <span>Calculated for {currentDate.toLocaleDateString('en-US', { month: 'short' })}</span>
                 </div>
             </section>
 
@@ -154,16 +190,16 @@ export const Dashboard = () => {
             {/* Recent Activity */}
             <section className="pb-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Activity</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity ({currentDate.toLocaleDateString('en-US', { month: 'short' })})</h3>
                     <button className="text-sm font-semibold text-primary">See All</button>
                 </div>
                 <div className="space-y-3">
                     {loading ? (
                         <p className="text-slate-400 text-center text-sm py-4">Loading transactions...</p>
-                    ) : transactions.length === 0 ? (
-                        <p className="text-slate-400 text-center text-sm py-4">No transactions yet.</p>
+                    ) : filteredTransactions.length === 0 ? (
+                        <p className="text-slate-400 text-center text-sm py-4">No transactions for {currentDate.toLocaleDateString('en-US', { month: 'long' })}.</p>
                     ) : (
-                        transactions.slice(0, 5).map(t => (
+                        filteredTransactions.map(t => (
                             <TransactionItem key={t.id} transaction={t} />
                         ))
                     )}
