@@ -6,6 +6,7 @@ export interface Transaction {
     date: string; // ISO date string
     type: 'income' | 'expense';
     icon: string;
+    createdBy?: string;
 }
 
 export interface ShoppingItem {
@@ -14,6 +15,7 @@ export interface ShoppingItem {
     quantity: number;
     category?: string; // 'groceries' | 'electronics' etc
     checked: boolean;
+    boughtBy?: string;
 }
 
 export interface Category {

@@ -3,7 +3,9 @@ import { Dashboard } from './components/Dashboard';
 import { ShoppingList } from './components/ShoppingList';
 import { BudgetHistory } from './components/BudgetHistory';
 import { AddExpense } from './components/AddExpense';
-import { LayoutGrid, Wallet, PieChart, User, Plus } from 'lucide-react';
+import { LayoutGrid, Wallet, PieChart, User as UserIcon, Plus } from 'lucide-react';
+import { UserProvider, useUser } from './UserContext';
+import { UserSelection } from './components/UserSelection';
 
 const BottomNavigation = () => {
     const location = useLocation();
@@ -44,7 +46,7 @@ const BottomNavigation = () => {
             <button 
                 className={`flex flex-col items-center gap-1 transition-colors ${isActive('/profile') ? 'text-primary' : 'text-slate-400'}`}
             >
-                <User size={24} />
+                <UserIcon size={24} />
                 <span className="text-[10px] font-bold">Profile</span>
             </button>
 
@@ -59,18 +61,32 @@ const BottomNavigation = () => {
     );
 };
 
+const AppContent = () => {
+    const { user } = useUser();
+
+    if (!user) {
+        return <UserSelection />;
+    }
+
+    return (
+        <Router>
+            <div className="antialiased min-h-screen pb-24">
+                <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/shopping" element={<ShoppingList />} />
+                    <Route path="/history" element={<BudgetHistory />} />
+                    <Route path="/add" element={<AddExpense />} />
+                </Routes>
+                <BottomNavigation />
+            </div>
+        </Router>
+    );
+};
+
 export default function App() {
   return (
-    <Router>
-        <div className="antialiased min-h-screen pb-24">
-            <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/shopping" element={<ShoppingList />} />
-                <Route path="/history" element={<BudgetHistory />} />
-                <Route path="/add" element={<AddExpense />} />
-            </Routes>
-            <BottomNavigation />
-        </div>
-    </Router>
+    <UserProvider>
+        <AppContent />
+    </UserProvider>
   );
 }

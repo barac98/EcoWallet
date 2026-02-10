@@ -4,6 +4,8 @@ import { Transaction, ShoppingItem } from './types';
 // DEVELOPMENT: Falls back to '/api' which Vite proxies to localhost:3001
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
+const getCurrentUser = () => localStorage.getItem('ecowallet_user') || 'Family';
+
 async function fetchWithFallback<T>(endpoint: string, cacheKey: string, options?: RequestInit): Promise<T> {
     try {
         const response = await fetch(`${API_URL}${endpoint}`, options);
@@ -35,10 +37,15 @@ export const api = {
     
     addTransaction: async (transaction: Omit<Transaction, 'id'>) => {
         try {
+            const payload = {
+                ...transaction,
+                createdBy: getCurrentUser()
+            };
+
             const res = await fetch(`${API_URL}/transactions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(transaction)
+                body: JSON.stringify(payload)
             });
             if(!res.ok) throw new Error("Failed to add");
             return await res.json();
@@ -52,19 +59,29 @@ export const api = {
     getShoppingItems: () => fetchWithFallback<ShoppingItem[]>('/shopping', 'shopping'),
 
     addShoppingItem: async (item: Omit<ShoppingItem, 'id'>) => {
+        const payload = {
+            ...item,
+            boughtBy: item.checked ? getCurrentUser() : null // unlikely to be checked on creation, but for safety
+        };
+
         const res = await fetch(`${API_URL}/shopping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item)
+            body: JSON.stringify(payload)
         });
         return res.json();
     },
 
     toggleShoppingItem: async (id: string, checked: boolean) => {
+        const payload = { 
+            checked,
+            boughtBy: checked ? getCurrentUser() : null
+        };
+
         await fetch(`${API_URL}/shopping/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ checked })
+            body: JSON.stringify(payload)
         });
     },
 

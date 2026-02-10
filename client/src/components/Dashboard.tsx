@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Edit2, TrendingUp, ShoppingBag, Home, DollarSign, Coffee, QrCode, Sliders, Music, Zap, RefreshCw } from 'lucide-react';
+import { ChevronRight, Edit2, TrendingUp, ShoppingBag, Home, DollarSign, Coffee, QrCode, Sliders, Music, Zap, RefreshCw, LogOut } from 'lucide-react';
 import { Transaction } from '../types';
 import { api } from '../api';
+import { useUser } from '../UserContext';
 
 const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     const getIcon = (iconName: string) => {
@@ -23,13 +24,22 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
     };
 
     return (
-        <div className="flex items-center justify-between p-4 bg-white dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-white/5 shadow-sm">
+        <div className="flex items-center justify-between p-4 bg-white dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-white/5 shadow-sm relative overflow-hidden">
+             {/* User Indicator */}
+             {transaction.createdBy && (
+                <div className="absolute top-0 right-0 bg-slate-200 dark:bg-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded-bl-lg text-slate-600 dark:text-slate-300">
+                    {transaction.createdBy}
+                </div>
+            )}
+            
             <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getColor(transaction.category)}`}>
                     {getIcon(transaction.icon)}
                 </div>
                 <div>
-                    <p className="font-bold text-slate-900 dark:text-white">{transaction.title}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900 dark:text-white">{transaction.title}</p>
+                    </div>
                     <p className="text-xs text-slate-400">{new Date(transaction.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
             </div>
@@ -41,6 +51,7 @@ const TransactionItem = ({ transaction }: { transaction: Transaction }) => {
 };
 
 export const Dashboard = () => {
+    const { user, logout } = useUser();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -68,9 +79,19 @@ export const Dashboard = () => {
         <div className="px-6 pt-4 space-y-6">
             {/* Header */}
             <header className="flex items-center justify-between">
-                <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-sm dark:text-white">
-                    <ChevronLeft size={20} />
+                {/* User Badge - Click to Logout */}
+                <button 
+                    onClick={() => {
+                        if(confirm(`Switch user from ${user}?`)) logout();
+                    }}
+                    className="flex items-center gap-2 bg-white dark:bg-surface-dark pl-1 pr-3 py-1 rounded-full shadow-sm border border-slate-100 dark:border-white/5 active:bg-slate-50 dark:active:bg-white/10"
+                >
+                    <div className="w-8 h-8 rounded-full bg-primary text-background-dark font-bold flex items-center justify-center text-sm">
+                        {user ? user[0].toUpperCase() : '?'}
+                    </div>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{user}</span>
                 </button>
+
                 <div className="flex flex-col items-center">
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Timeline</span>
                     <div className="flex items-center gap-2">
