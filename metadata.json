@@ -1,0 +1,7 @@
+{
+  "name": "EcoWallet",
+  "description": "A mobile-first budget and shopping application with offline capabilities.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
