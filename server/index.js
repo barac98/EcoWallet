@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config(); // Load environment variables
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -15,23 +16,45 @@ app.use(express.json());
 let db;
 const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
 
-// Check if Firebase service account exists
-if (fs.existsSync(serviceAccountPath)) {
+// Function to initialize Firebase
+const initFirebase = () => {
     try {
-        const serviceAccount = require(serviceAccountPath);
-        initializeApp({
-            credential: cert(serviceAccount)
-        });
-        db = getFirestore();
-        console.log("🔥 Firebase Firestore Connected");
+        // 1. Try Environment Variables (Preferred for Production/Cloud)
+        if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+            const serviceAccount = {
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                // Handle newlines in private key which are often escaped in .env files
+                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+            };
+            
+            initializeApp({
+                credential: cert(serviceAccount)
+            });
+            db = getFirestore();
+            console.log("🔥 Firebase Firestore Connected (via Environment Variables)");
+            return;
+        }
+
+        // 2. Try JSON File (Legacy/Local Development)
+        if (fs.existsSync(serviceAccountPath)) {
+            const serviceAccount = require(serviceAccountPath);
+            initializeApp({
+                credential: cert(serviceAccount)
+            });
+            db = getFirestore();
+            console.log("🔥 Firebase Firestore Connected (via JSON File)");
+            return;
+        }
+
+        throw new Error("No credentials found");
     } catch (error) {
-        console.error("Firebase init failed:", error);
+        console.error("Firebase init failed:", error.message);
         console.log("⚠️ Using In-Memory Database (Data will be lost on restart)");
     }
-} else {
-    console.log("⚠️ No serviceAccountKey.json found in server/ directory.");
-    console.log("⚠️ Using In-Memory Database (Data will be lost on restart)");
-}
+};
+
+initFirebase();
 
 // In-Memory Fallback Store
 const memoryStore = {

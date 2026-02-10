@@ -56,33 +56,28 @@ Open your browser to `http://localhost:5173`.
 
 ## 🔥 Firebase Configuration (Database)
 
-To enable permanent data storage (instead of the data resetting every time you restart the server), follow these steps to link a Firebase project:
+To enable persistent data storage using Firebase Firestore, you need to configure Environment Variables.
 
-### Step 1: Create Project
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Click **"Add project"**.
-3.  Name it `EcoWallet` (or similar) and disable Google Analytics for now.
-4.  Click **"Create Project"**.
+### Step 1: Get Credentials
+1.  Go to **Firebase Console > Project Settings > Service Accounts**.
+2.  Click **"Generate new private key"**.
+3.  Open the downloaded JSON file. You will need `project_id`, `client_email`, and `private_key`.
 
-### Step 2: Create Database
-1.  In the project sidebar, go to **Build** > **Firestore Database**.
-2.  Click **"Create database"**.
-3.  Select a location (e.g., `nam5 (us-central)`).
-4.  Choose **"Start in production mode"** (The backend uses a Service Account which has full admin access, so it bypasses these rules).
-5.  Click **"Create"**.
+### Step 2: Configure Environment
+1.  In the `server/` directory, create a file named `.env`.
+2.  Add the following variables (copy values from your JSON file):
 
-### Step 3: Generate Service Key
-1.  Click the **Gear Icon ⚙️** next to "Project Overview" in the sidebar and select **Project settings**.
-2.  Go to the **Service accounts** tab.
-3.  Click **"Generate new private key"**.
-4.  Click **"Generate key"** to download the JSON file.
+```ini
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=your-email@project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...your-key-content...\n-----END PRIVATE KEY-----\n"
+```
 
-### Step 4: Link to App
-1.  Rename the downloaded file to `serviceAccountKey.json`.
-2.  Move this file into your `server/` directory.
-    *   *Path should be: `server/serviceAccountKey.json`*
-3.  Restart your backend server (`Ctrl+C` then `npm run dev`).
-4.  You should see `🔥 Firebase Firestore Connected` in the terminal.
+**Important:** Ensure the `FIREBASE_PRIVATE_KEY` is enclosed in quotes so that newline characters (`\n`) are preserved correctly.
+
+### Step 3: Restart Server
+Restart the backend server. You should see:
+`🔥 Firebase Firestore Connected (via Environment Variables)`
 
 ## 📱 PWA & Mobile Installation
 
@@ -106,7 +101,7 @@ To test the PWA functionality:
 │
 ├── server/                 # Express Backend
 │   ├── index.js            # Server entry & API Routes
-│   ├── serviceAccountKey.json # (Ignored Secret) Firebase Credentials
+│   ├── .env                # (Created by you) Secrets
 │   └── .gitignore          # Backend ignore file
 │
 └── README.md
