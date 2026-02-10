@@ -38,8 +38,6 @@ npm install
 npm run dev
 ```
 
-*Note: By default, the server uses an **In-Memory Database**. Data will reset when the server restarts. To enable persistent storage, add a `serviceAccountKey.json` from Firebase to the `server/` folder.*
-
 ### 2. Frontend Setup
 
 The frontend runs on port `5173` (default Vite port) and proxies API requests to the backend.
@@ -55,6 +53,36 @@ npm run dev
 ```
 
 Open your browser to `http://localhost:5173`.
+
+## 🔥 Firebase Configuration (Database)
+
+To enable permanent data storage (instead of the data resetting every time you restart the server), follow these steps to link a Firebase project:
+
+### Step 1: Create Project
+1.  Go to the [Firebase Console](https://console.firebase.google.com/).
+2.  Click **"Add project"**.
+3.  Name it `EcoWallet` (or similar) and disable Google Analytics for now.
+4.  Click **"Create Project"**.
+
+### Step 2: Create Database
+1.  In the project sidebar, go to **Build** > **Firestore Database**.
+2.  Click **"Create database"**.
+3.  Select a location (e.g., `nam5 (us-central)`).
+4.  Choose **"Start in production mode"** (The backend uses a Service Account which has full admin access, so it bypasses these rules).
+5.  Click **"Create"**.
+
+### Step 3: Generate Service Key
+1.  Click the **Gear Icon ⚙️** next to "Project Overview" in the sidebar and select **Project settings**.
+2.  Go to the **Service accounts** tab.
+3.  Click **"Generate new private key"**.
+4.  Click **"Generate key"** to download the JSON file.
+
+### Step 4: Link to App
+1.  Rename the downloaded file to `serviceAccountKey.json`.
+2.  Move this file into your `server/` directory.
+    *   *Path should be: `server/serviceAccountKey.json`*
+3.  Restart your backend server (`Ctrl+C` then `npm run dev`).
+4.  You should see `🔥 Firebase Firestore Connected` in the terminal.
 
 ## 📱 PWA & Mobile Installation
 
@@ -78,7 +106,8 @@ To test the PWA functionality:
 │
 ├── server/                 # Express Backend
 │   ├── index.js            # Server entry & API Routes
-│   └── serviceAccountKey.json # (Optional) Firebase Credentials
+│   ├── serviceAccountKey.json # (Ignored Secret) Firebase Credentials
+│   └── .gitignore          # Backend ignore file
 │
 └── README.md
 ```
