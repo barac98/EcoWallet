@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Helper Functions ---
+    
+    // Checks if a field is either missing (undefined) or is a String
+    function isOptionalString(field) {
+      return !((field in request.resource.data) && !(request.resource.data[field] is string));
+    }
+
+    // --- Transactions Collection ---
+    match /transactions/{transactionId} {
+      // Allow public access for Family Mode (since backend handles logic via Admin SDK)
+      // If moving to client-side SDK, replace 'true' with 'request.auth != null'
+      allow read, delete: if true;
+      
+      // Enforce Schema on Create/Update
+      allow create, update: if 
+        request.resource.data.title is string &&
+        request.resource.data.amount is number &&
+        // Ensure type is strictly 'income' or 'expense'
+        (request.resource.data.type == 'income' || request.resource.data.type == 'expense') &&
+        request.resource.data.date is string &&
+        request.resource.data.category is string &&
+        request.resource.data.icon is string &&
+        // Optional metadata
+        isOptionalString('createdBy');
+    }
+
+    // --- Shopping List Collection ---
+    match /shopping/{itemId} {
+      allow read, delete: if true;
+      
+      // Enforce Schema on Create/Update
+      allow create, update: if 
+        request.resource.data.name is string &&
+        
+        // Quantity Validation
+        request.resource.data.quantity is number &&
+        request.resource.data.quantity >= 1 &&
+        
+        // Status Boolean (renamed from 'checked' in previous step)
+        request.resource.data.isPurchased is bool &&
+        
+        // Optional metadata
+        isOptionalString('category') &&
+        isOptionalString('addedBy');
+    }
+  }
+}

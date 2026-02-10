@@ -63,11 +63,8 @@ export const api = {
     addShoppingItem: async (item: Omit<ShoppingItem, 'id'>) => {
         const payload = {
             ...item,
-            addedBy: getCurrentUser(),
-            isPurchased: false,
-            boughtBy: null
+            addedBy: item.addedBy || getCurrentUser()
         };
-
         const res = await fetch(`${API_URL}/shopping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -77,17 +74,10 @@ export const api = {
     },
 
     updateShoppingItem: async (id: string, updates: Partial<ShoppingItem>) => {
-        const payload = { ...updates };
-        
-        // If checking/unchecking, update the 'boughtBy' field
-        if ('isPurchased' in updates) {
-            payload.boughtBy = updates.isPurchased ? getCurrentUser() : undefined; 
-        }
-
         await fetch(`${API_URL}/shopping/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(updates)
         });
     },
 

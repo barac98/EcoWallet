@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Plus, Loader2, Minus, ShoppingBag, X } from 'lucide-react';
+import { Check, Plus, Loader2, Minus, ShoppingBag, X, Trash2 } from 'lucide-react';
 import { ShoppingItem } from '../types';
 import { api } from '../api';
+import { useUser } from '../UserContext';
 
 export const ShoppingList = () => {
+    const { user } = useUser();
     const [items, setItems] = useState<ShoppingItem[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    // Add Item Form State
     const [newItemName, setNewItemName] = useState('');
     const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
     const [isAdding, setIsAdding] = useState(false);
     
-    // Quantity Editing State
+    // Edit Mode State (for Quantity)
     const [editingQtyId, setEditingQtyId] = useState<string | null>(null);
 
     // Complete Trip State
@@ -38,10 +42,13 @@ export const ShoppingList = () => {
     };
 
     const updateQuantity = async (id: string, newQty: number) => {
-        if (newQty < 1) return;
+        if (newQty < 1) return; // Prevent going below 1
+        
+        // Optimistic
         setItems(items.map(item => 
             item.id === id ? { ...item, quantity: newQty } : item
         ));
+        // API
         await api.updateShoppingItem(id, { quantity: newQty });
     };
 
@@ -53,12 +60,15 @@ export const ShoppingList = () => {
             name: newItemName,
             quantity: newItemQuantity,
             isPurchased: false,
-            category: 'Groceries'
+            category: 'Groceries',
+            addedBy: user || 'Family'
         };
 
         setIsAdding(true);
         const added = await api.addShoppingItem(newItem);
         setItems([...items, added]);
+        
+        // Reset form
         setNewItemName('');
         setNewItemQuantity(1);
         setIsAdding(false);
@@ -69,19 +79,24 @@ export const ShoppingList = () => {
         setIsSavingTrip(true);
 
         const purchasedItems = items.filter(i => i.isPurchased);
+        
+        // Create summary string for the transaction title or just count
+        const summary = `Shopping: ${purchasedItems.length} items`;
 
         // 1. Add Transaction
         await api.addTransaction({
+            title: summary,
             amount: parseFloat(tripTotal),
             category: 'Groceries',
             date: new Date().toISOString(),
             type: 'expense',
-            icon: 'ShoppingBag',
-            title: `Shopping: ${purchasedItems.length} items` 
+            icon: 'ShoppingBag'
         });
 
-        // 2. Clear Items
+        // 2. Clear Items from DB
         await api.clearPurchasedItems();
+        
+        // 3. Update Local State
         setItems(items.filter(i => !i.isPurchased));
         
         setIsSavingTrip(false);
@@ -109,7 +124,7 @@ export const ShoppingList = () => {
                     )}
                 </div>
 
-                {/* Quick Add Input */}
+                {/* Quick Add Form */}
                 <form onSubmit={handleAddItem} className="flex gap-2 items-stretch">
                     <div className="flex-1 bg-white dark:bg-surface-dark rounded-xl flex items-center p-1 border border-slate-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-primary transition-all shadow-sm">
                         <input 
@@ -124,7 +139,7 @@ export const ShoppingList = () => {
                             <button 
                                 type="button"
                                 onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
-                                className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 shadow-sm active:scale-90 transition-transform"
+                                className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 shadow-sm active:scale-90 transition-transform hover:bg-slate-200 dark:hover:bg-white/20"
                             >
                                 <Minus size={12} />
                             </button>
@@ -132,7 +147,7 @@ export const ShoppingList = () => {
                             <button 
                                 type="button"
                                 onClick={() => setNewItemQuantity(newItemQuantity + 1)}
-                                className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 shadow-sm active:scale-90 transition-transform"
+                                className="w-7 h-7 flex items-center justify-center rounded-md bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300 shadow-sm active:scale-90 transition-transform hover:bg-slate-200 dark:hover:bg-white/20"
                             >
                                 <Plus size={12} />
                             </button>
@@ -141,7 +156,7 @@ export const ShoppingList = () => {
                     <button 
                         type="submit" 
                         disabled={isAdding || !newItemName.trim()}
-                        className="w-12 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-background-dark disabled:opacity-50"
+                        className="w-12 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-background-dark disabled:opacity-50 transition-colors"
                     >
                         {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={24} />}
                     </button>
@@ -156,18 +171,25 @@ export const ShoppingList = () => {
                 ) : (
                     <div className="space-y-3">
                         {/* Active Items */}
+                        {activeItems.length === 0 && purchasedItems.length === 0 && (
+                            <div className="text-center py-10 opacity-50">
+                                <ShoppingBag size={48} className="mx-auto mb-2 text-slate-400" />
+                                <p>Your list is empty</p>
+                            </div>
+                        )}
+
                         {activeItems.map(item => (
                             <div 
                                 key={item.id}
                                 className="group flex items-center justify-between p-4 bg-white dark:bg-surface-dark rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm transition-all"
                             >
                                 <div 
-                                    className="flex items-center gap-4 flex-1 cursor-pointer"
+                                    className="flex items-center gap-4 flex-1 cursor-pointer min-w-0"
                                     onClick={() => toggleItem(item.id, item.isPurchased)}
                                 >
-                                    <div className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-6 h-6 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center flex-shrink-0 group-hover:border-primary transition-colors">
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <p className="font-semibold text-[16px] truncate">{item.name}</p>
                                         <div className="flex items-center gap-2">
                                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.category}</p>
@@ -182,7 +204,7 @@ export const ShoppingList = () => {
                                 </div>
 
                                 {/* Quantity Badge / Editor */}
-                                <div className="ml-3">
+                                <div className="ml-3 flex-shrink-0">
                                     {editingQtyId === item.id ? (
                                         <div className="flex items-center gap-2 bg-slate-100 dark:bg-black/40 rounded-lg p-1 animate-in fade-in zoom-in duration-200">
                                             <button 
@@ -200,7 +222,7 @@ export const ShoppingList = () => {
                                             </button>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setEditingQtyId(null); }}
-                                                className="ml-1 w-6 h-8 flex items-center justify-center text-slate-400"
+                                                className="ml-1 w-6 h-8 flex items-center justify-center text-slate-400 hover:text-primary"
                                             >
                                                 <Check size={14} />
                                             </button>
@@ -218,7 +240,7 @@ export const ShoppingList = () => {
                         ))}
 
                         {/* Separator */}
-                        {purchasedItems.length > 0 && (
+                        {purchasedItems.length > 0 && activeItems.length > 0 && (
                             <div className="px-2 mt-8 mb-2 flex items-center gap-2">
                                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Purchased ({purchasedItems.length})</span>
                                 <div className="flex-1 h-[1px] bg-slate-200 dark:bg-white/10"></div>
@@ -230,14 +252,17 @@ export const ShoppingList = () => {
                             <div 
                                 key={item.id}
                                 onClick={() => toggleItem(item.id, item.isPurchased)}
-                                className="group flex items-center justify-between p-4 bg-transparent rounded-2xl opacity-50 cursor-pointer"
+                                className="group flex items-center justify-between p-4 bg-transparent rounded-2xl opacity-50 cursor-pointer hover:opacity-80 transition-opacity"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                                         <Check size={14} className="text-background-dark" strokeWidth={4} />
                                     </div>
-                                    <div>
-                                        <p className="font-medium text-[16px] line-through text-slate-900 dark:text-white">{item.name} <span className="text-sm opacity-70">(x{item.quantity})</span></p>
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-[16px] line-through text-slate-900 dark:text-white truncate">
+                                            {item.name} 
+                                            <span className="text-sm opacity-70 ml-2 font-normal no-line-through">(x{item.quantity})</span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -254,17 +279,17 @@ export const ShoppingList = () => {
                             <h2 className="text-xl font-bold dark:text-white">Complete Trip</h2>
                             <button 
                                 onClick={() => setIsCompletingTrip(false)}
-                                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500"
+                                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
                             >
                                 <X size={18} />
                             </button>
                         </div>
                         
-                        <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 mb-6">
+                        <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 mb-6 max-h-40 overflow-y-auto">
                             <p className="text-sm text-slate-500 mb-2">Purchased Items:</p>
                             <div className="flex flex-wrap gap-2">
                                 {purchasedItems.map(i => (
-                                    <span key={i.id} className="text-xs bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 px-2 py-1 rounded-md text-slate-700 dark:text-slate-300">
+                                    <span key={i.id} className="text-xs bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 px-2 py-1 rounded-md text-slate-700 dark:text-slate-300 flex items-center gap-1">
                                         {i.name} <span className="text-primary font-bold">x{i.quantity}</span>
                                     </span>
                                 ))}
@@ -281,7 +306,7 @@ export const ShoppingList = () => {
                                     onChange={(e) => setTripTotal(e.target.value)}
                                     placeholder="0.00"
                                     autoFocus
-                                    className="w-full bg-slate-100 dark:bg-black/40 border-none rounded-2xl py-4 pl-10 pr-4 text-3xl font-bold text-slate-900 dark:text-white placeholder-slate-300 focus:ring-2 focus:ring-primary"
+                                    className="w-full bg-slate-100 dark:bg-black/40 border-none rounded-2xl py-4 pl-10 pr-4 text-3xl font-bold text-slate-900 dark:text-white placeholder-slate-300 focus:ring-2 focus:ring-primary outline-none transition-shadow"
                                 />
                             </div>
                         </div>
@@ -289,7 +314,7 @@ export const ShoppingList = () => {
                         <button 
                             onClick={handleCompleteTrip}
                             disabled={isSavingTrip || !tripTotal}
-                            className="w-full bg-primary text-background-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+                            className="w-full bg-primary text-background-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 hover:bg-primary-dark"
                         >
                             {isSavingTrip ? <Loader2 className="animate-spin" /> : <> <ShoppingBag size={20} /> Save Expense & Clear List </>}
                         </button>

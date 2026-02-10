@@ -44,8 +44,8 @@ export const INITIAL_SHOPPING_ITEMS: ShoppingItem[] = [
     { id: '2', name: 'Almond Milk', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Dad' },
     { id: '3', name: 'Fresh Blueberries', quantity: 2, isPurchased: false, category: 'Groceries', addedBy: 'Mom' },
     { id: '4', name: 'Sourdough Bread', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Family' },
-    { id: '5', name: 'Greek Yogurt', quantity: 4, isPurchased: true, category: 'Groceries', addedBy: 'Mom', boughtBy: 'Mom' },
-    { id: '6', name: 'Sparkling Water', quantity: 6, isPurchased: true, category: 'Groceries', addedBy: 'Dad', boughtBy: 'Dad' }
+    { id: '5', name: 'Greek Yogurt', quantity: 4, isPurchased: true, category: 'Groceries', addedBy: 'Mom' },
+    { id: '6', name: 'Sparkling Water', quantity: 6, isPurchased: true, category: 'Groceries', addedBy: 'Dad' }
 ];
 
 export const CHART_DATA: ChartData[] = [
