@@ -6,6 +6,7 @@ The backend for EcoWallet acts as an API layer between the frontend and the data
 
 *   **Runtime:** Node.js
 *   **Framework:** Express.js
+*   **Documentation:** Swagger (OpenAPI 3.0)
 *   **Database SDK:** Firebase Admin SDK
 *   **In-Memory Fallback:** The server automatically uses local memory storage if no Firebase credentials are provided.
 
@@ -21,6 +22,24 @@ npm install
 npm run dev
 ```
 The server runs on `http://localhost:3001`.
+
+## 📚 API Documentation (Swagger)
+
+Once the server is running, you can access the interactive Swagger UI to visualize and test the API:
+
+*   **URL:** [http://localhost:3001/api-docs](http://localhost:3001/api-docs)
+*   **Capabilities:**
+    *   Explore all available endpoints (`/transactions`, `/shopping`).
+    *   View detailed Request/Response schemas.
+    *   Execute API calls directly from the browser to test functionality.
+
+## 📂 Project Structure
+
+The server codebase is modularized for better scalability:
+
+*   `routes/`: Contains API route definitions (`transactions.js`, `shopping.js`).
+*   `lib/`: Shared utilities (`db.js` for database connection, `swagger.js` for config).
+*   `index.js`: Main entry point that mounts routes and middleware.
 
 ## 🔥 Firebase Configuration
 

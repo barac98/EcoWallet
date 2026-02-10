@@ -32,8 +32,16 @@ To get the full application running locally:
 3.  **Open App:**
     Visit `http://localhost:5173` in your browser.
 
+## 📚 API Documentation
+
+The backend includes a fully interactive Swagger UI to explore and test endpoints.
+
+*   **URL:** `http://localhost:3001/api-docs`
+*   **Features:** View schemas, test GET/POST/PATCH/DELETE requests directly in the browser.
+
 ## 📱 Features
 *   **Expenses:** Track income and expenses with visual charts.
 *   **Shopping:** Real-time shopping list with quantities and "Complete Trip" workflow.
 *   **Family Mode:** Simple user switching profile system.
 *   **PWA:** Installable on mobile devices with offline support.
+*   **Dev Tools:** Integrated Swagger UI for API testing.

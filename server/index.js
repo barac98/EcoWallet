@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./lib/swagger');
 require('dotenv').config();
 const { initFirebase } = require('./lib/db');
 const transactionsRouter = require('./routes/transactions');
@@ -13,6 +15,10 @@ app.use(express.json());
 
 // Initialize Database (Firebase or Memory)
 initFirebase();
+
+// --- Documentation ---
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+console.log(`📄 Swagger Docs available at http://localhost:${PORT}/api-docs`);
 
 // --- Routes ---
 app.use('/api/transactions', transactionsRouter);
