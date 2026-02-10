@@ -1,8 +1,9 @@
 import { Transaction, ShoppingItem } from './types';
 
-// PRODUCTION: Set VITE_API_URL in your static host (e.g., Render) to your backend URL + /api
-// DEVELOPMENT: Falls back to '/api' which Vite proxies to localhost:3001
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// PRODUCTION: Set VITE_API_URL in your static host (e.g., Render) to your backend URL (e.g., https://my-app.onrender.com)
+// DEVELOPMENT: VITE_API_URL is undefined, so we use empty string -> requests go to '/api' which Vite proxies to localhost:3001
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = `${BASE_URL}/api`;
 
 const getCurrentUser = () => localStorage.getItem('ecowallet_user') || 'Family';
 

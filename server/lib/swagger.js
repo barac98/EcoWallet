@@ -1,5 +1,10 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 
+// Dynamic Server URL: Use Render's external URL if available, otherwise localhost
+const serverUrl = process.env.RENDER_EXTERNAL_URL 
+  ? `${process.env.RENDER_EXTERNAL_URL}/api` 
+  : 'http://localhost:3001/api';
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -10,8 +15,8 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3001/api',
-        description: 'Local Development Server',
+        url: serverUrl,
+        description: process.env.RENDER_EXTERNAL_URL ? 'Production Server' : 'Local Development Server',
       },
     ],
     components: {
@@ -45,7 +50,7 @@ const options = {
       },
     },
   },
-  // Paths to files containing OpenAPI definitions
+  // Paths to files containing OpenAPI definitions (relative to where node is executed)
   apis: ['./routes/*.js'], 
 };
 
