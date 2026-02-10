@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
     Bell, 
     Edit2, 
-    Plus, 
-    ShoppingCart, 
-    PieChart, 
     ShoppingBag, 
     Coffee, 
     Home, 
@@ -200,40 +197,7 @@ export const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* 3. Action Buttons */}
-                <div className="grid grid-cols-3 gap-4">
-                    <button 
-                        onClick={() => navigate('/add')}
-                        className="flex flex-col items-center gap-2 group"
-                    >
-                        <div className="w-16 h-16 rounded-[2rem] bg-primary flex items-center justify-center text-background-dark shadow-lg shadow-primary/20 group-active:scale-95 transition-transform">
-                            <Plus size={32} strokeWidth={2.5} />
-                        </div>
-                        <span className="text-xs font-semibold text-slate-300">Expense</span>
-                    </button>
-
-                    <button 
-                        onClick={() => navigate('/shopping')}
-                        className="flex flex-col items-center gap-2 group"
-                    >
-                        <div className="w-16 h-16 rounded-[2rem] bg-surface-card border border-white/10 flex items-center justify-center text-white group-active:scale-95 transition-transform">
-                            <ShoppingCart size={28} strokeWidth={1.5} />
-                        </div>
-                        <span className="text-xs font-semibold text-slate-300">Shopping</span>
-                    </button>
-
-                    <button 
-                        onClick={() => navigate('/history')}
-                        className="flex flex-col items-center gap-2 group"
-                    >
-                        <div className="w-16 h-16 rounded-[2rem] bg-surface-card border border-white/10 flex items-center justify-center text-white group-active:scale-95 transition-transform">
-                            <PieChart size={28} strokeWidth={1.5} />
-                        </div>
-                        <span className="text-xs font-semibold text-slate-300">Analytics</span>
-                    </button>
-                </div>
-
-                {/* 4. Recent Transactions */}
+                {/* 3. Recent Transactions */}
                 <div>
                     <div className="flex justify-between items-center mb-4 px-1">
                         <h3 className="text-lg font-bold">Recent Transactions</h3>
@@ -269,7 +233,7 @@ export const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* 5. Shopping Summary Card */}
+                {/* 4. Shopping Summary Card */}
                 <div 
                     onClick={() => navigate('/shopping')}
                     className="bg-[#1a237e] rounded-3xl p-5 border border-white/10 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform relative overflow-hidden"
