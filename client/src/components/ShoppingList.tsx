@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Check, Plus, Loader2, Minus, ShoppingBag, X } from 'lucide-react';
 import { ShoppingItem } from '../types';
 import { api } from '../api';
 import { useUser } from '../UserContext';
+import { useFirestore } from '../hooks/useFirestore';
 
 export const ShoppingList = () => {
     const { user } = useUser();
-    const [items, setItems] = useState<ShoppingItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    
+    // Real-Time Data
+    // Sorted by created date implicitly or by name? 
+    // Using a default sort for consistent UI
+    const { data: items, loading } = useFirestore<ShoppingItem>('shopping');
     
     // Add Item Form State
     const [newItemName, setNewItemName] = useState('');
@@ -22,33 +26,15 @@ export const ShoppingList = () => {
     const [tripTotal, setTripTotal] = useState('');
     const [isSavingTrip, setIsSavingTrip] = useState(false);
 
-    const loadItems = async () => {
-        const data = await api.getShoppingItems();
-        setItems(data);
-        setLoading(false);
-    };
-
-    useEffect(() => {
-        loadItems();
-    }, []);
+    // Optimistic UI handled by Firestore SDK for writes, so we just call API
+    // and wait for the real-time listener to update the list.
 
     const toggleItem = async (id: string, currentStatus: boolean) => {
-        // Optimistic update
-        setItems(items.map(item => 
-            item.id === id ? { ...item, isPurchased: !item.isPurchased } : item
-        ));
-        // API call
         await api.updateShoppingItem(id, { isPurchased: !currentStatus });
     };
 
     const updateQuantity = async (id: string, newQty: number) => {
-        if (newQty < 1) return; // Prevent going below 1
-        
-        // Optimistic
-        setItems(items.map(item => 
-            item.id === id ? { ...item, quantity: newQty } : item
-        ));
-        // API
+        if (newQty < 1) return;
         await api.updateShoppingItem(id, { quantity: newQty });
     };
 
@@ -56,6 +42,8 @@ export const ShoppingList = () => {
         e.preventDefault();
         if(!newItemName.trim()) return;
         
+        setIsAdding(true);
+
         const newItem: Omit<ShoppingItem, 'id'> = {
             name: newItemName,
             quantity: newItemQuantity,
@@ -64,9 +52,7 @@ export const ShoppingList = () => {
             addedBy: user || 'Family'
         };
 
-        setIsAdding(true);
-        const added = await api.addShoppingItem(newItem);
-        setItems([...items, added]);
+        await api.addShoppingItem(newItem);
         
         // Reset form
         setNewItemName('');
@@ -79,8 +65,6 @@ export const ShoppingList = () => {
         setIsSavingTrip(true);
 
         const purchasedItems = items.filter(i => i.isPurchased);
-        
-        // Create summary string for the transaction title or just count
         const summary = `Shopping: ${purchasedItems.length} items`;
 
         // 1. Add Transaction
@@ -95,9 +79,6 @@ export const ShoppingList = () => {
 
         // 2. Clear Items from DB
         await api.clearPurchasedItems();
-        
-        // 3. Update Local State
-        setItems(items.filter(i => !i.isPurchased));
         
         setIsSavingTrip(false);
         setIsCompletingTrip(false);

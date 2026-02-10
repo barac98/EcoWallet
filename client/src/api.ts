@@ -1,90 +1,101 @@
+import { 
+    collection, 
+    addDoc, 
+    updateDoc, 
+    deleteDoc, 
+    doc, 
+    writeBatch, 
+    getDocs, 
+    query, 
+    where 
+} from 'firebase/firestore';
+import { db } from './firebase';
 import { Transaction, ShoppingItem } from './types';
 
-// PRODUCTION: Set VITE_API_URL in your static host (e.g., Render) to your backend URL (e.g., https://my-app.onrender.com)
-// DEVELOPMENT: VITE_API_URL is undefined, so we use empty string -> requests go to '/api' which Vite proxies to localhost:3001
-const BASE_URL = import.meta.env.VITE_API_URL || '';
-const API_URL = `${BASE_URL}/api`;
-
+// Helper to get current user from local storage
 const getCurrentUser = () => localStorage.getItem('ecowallet_user') || 'Family';
 
-async function fetchWithFallback<T>(endpoint: string, cacheKey: string, options?: RequestInit): Promise<T> {
-    try {
-        const response = await fetch(`${API_URL}${endpoint}`, options);
-        if (!response.ok) throw new Error('Network response was not ok');
-        
-        const data = await response.json();
-        
-        // Cache successful GET requests
-        if (!options || options.method === 'GET') {
-            localStorage.setItem(cacheKey, JSON.stringify(data));
-        }
-        
-        return data;
-    } catch (error) {
-        console.warn(`API Error for ${endpoint}, falling back to cache.`, error);
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-            return JSON.parse(cached);
-        }
-        if (!options || options.method === 'GET') {
-            return [] as any; 
-        }
-        throw error;
-    }
-}
+// NOTE: Reads are now handled by the useFirestore hook (onSnapshot) for real-time updates.
+// This file handles Writes using the Firebase SDK to ensure offline persistence.
 
 export const api = {
-    // Transactions
-    getTransactions: () => fetchWithFallback<Transaction[]>('/transactions', 'transactions'),
+    // --- Transactions ---
+
+    // (Legacy/One-off fetch)
+    getTransactions: async () => {
+        const q = query(collection(db, 'transactions'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
+    },
     
     addTransaction: async (transaction: Omit<Transaction, 'id'>) => {
         try {
             const payload = {
                 ...transaction,
-                createdBy: getCurrentUser()
+                createdBy: getCurrentUser(),
+                // Ensure date is saved as ISO string if not already
+                date: transaction.date || new Date().toISOString()
             };
-
-            const res = await fetch(`${API_URL}/transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if(!res.ok) throw new Error("Failed to add");
-            return await res.json();
+            
+            const docRef = await addDoc(collection(db, 'transactions'), payload);
+            return { id: docRef.id, ...payload };
         } catch (e) {
-            console.error(e);
-            alert("Could not save online. Check connection.");
-            return null;
+            console.error("Error adding transaction:", e);
+            throw e;
         }
     },
 
-    // Shopping
-    getShoppingItems: () => fetchWithFallback<ShoppingItem[]>('/shopping', 'shopping'),
+    // --- Shopping ---
+
+    // (Legacy/One-off fetch)
+    getShoppingItems: async () => {
+        const q = query(collection(db, 'shopping'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as ShoppingItem[];
+    },
 
     addShoppingItem: async (item: Omit<ShoppingItem, 'id'>) => {
-        const payload = {
-            ...item,
-            addedBy: item.addedBy || getCurrentUser()
-        };
-        const res = await fetch(`${API_URL}/shopping`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        return res.json();
+        try {
+            const payload = {
+                ...item,
+                addedBy: item.addedBy || getCurrentUser(),
+                createdAt: new Date().toISOString() // Useful for sorting
+            };
+            
+            const docRef = await addDoc(collection(db, 'shopping'), payload);
+            return { id: docRef.id, ...payload };
+        } catch (e) {
+            console.error("Error adding shopping item:", e);
+            throw e;
+        }
     },
 
     updateShoppingItem: async (id: string, updates: Partial<ShoppingItem>) => {
-        await fetch(`${API_URL}/shopping/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates)
-        });
+        try {
+            const docRef = doc(db, 'shopping', id);
+            await updateDoc(docRef, updates);
+        } catch (e) {
+            console.error("Error updating item:", e);
+            throw e;
+        }
     },
 
     clearPurchasedItems: async () => {
-        await fetch(`${API_URL}/shopping/clear-purchased`, {
-            method: 'DELETE'
-        });
+        try {
+            // 1. Query items where isPurchased == true
+            const q = query(collection(db, 'shopping'), where('isPurchased', '==', true));
+            const snapshot = await getDocs(q);
+
+            // 2. Batch delete
+            const batch = writeBatch(db);
+            snapshot.docs.forEach((document) => {
+                batch.delete(document.ref);
+            });
+
+            await batch.commit();
+        } catch (e) {
+            console.error("Error clearing items:", e);
+            throw e;
+        }
     }
 };

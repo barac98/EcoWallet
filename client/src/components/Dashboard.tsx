@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Bell, 
@@ -16,6 +16,7 @@ import {
 import { Transaction, ShoppingItem } from '../types';
 import { api } from '../api';
 import { useUser } from '../UserContext';
+import { useFirestore } from '../hooks/useFirestore';
 
 // --- Icon Helper ---
 const getIcon = (iconName: string) => {
@@ -43,30 +44,15 @@ export const Dashboard = () => {
     const { user } = useUser();
     const navigate = useNavigate();
     
-    // Data State
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Real-Time Data Hooks
+    const { data: transactions, loading: loadingTx } = useFirestore<Transaction>('transactions', 'date', 'desc');
+    const { data: shoppingItems, loading: loadingShop } = useFirestore<ShoppingItem>('shopping');
+    
+    const loading = loadingTx || loadingShop;
     
     // UI State
     const [showIncomeModal, setShowIncomeModal] = useState(false);
     const [newIncomeAmount, setNewIncomeAmount] = useState('');
-
-    // --- Data Loading ---
-    const loadData = async () => {
-        setLoading(true);
-        const [txData, shopData] = await Promise.all([
-            api.getTransactions(),
-            api.getShoppingItems()
-        ]);
-        setTransactions(txData);
-        setShoppingItems(shopData);
-        setLoading(false);
-    };
-
-    useEffect(() => {
-        loadData();
-    }, []);
 
     // --- Calculations ---
     const currentMonth = new Date().getMonth();
@@ -121,10 +107,9 @@ export const Dashboard = () => {
 
         setShowIncomeModal(false);
         setNewIncomeAmount('');
-        loadData();
     };
 
-    if (loading) {
+    if (loading && transactions.length === 0) {
         return (
             <div className="min-h-screen bg-background-dark flex items-center justify-center">
                 <Loader2 className="animate-spin text-primary" size={32} />

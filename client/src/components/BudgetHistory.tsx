@@ -1,25 +1,13 @@
-import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChevronLeft, SlidersHorizontal, ShoppingBag, DollarSign, Coffee, Clapperboard, Zap } from 'lucide-react';
-import { api } from '../api';
 import { Transaction, ChartData } from '../types';
+import { useFirestore } from '../hooks/useFirestore';
 
 export const BudgetHistory = () => {
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [chartData, setChartData] = useState<ChartData[]>([]);
-
-    useEffect(() => {
-        const load = async () => {
-            const data = await api.getTransactions();
-            setTransactions(data);
-            processChartData(data);
-        };
-        load();
-    }, []);
+    // Real-Time Transactions
+    const { data: transactions } = useFirestore<Transaction>('transactions', 'date', 'desc');
 
     const processChartData = (data: Transaction[]) => {
-        // Simple aggregation by month for demo purposes
-        // In a real app, this would be more robust date handling
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         const currentMonthIndex = new Date().getMonth();
         
@@ -41,9 +29,10 @@ export const BudgetHistory = () => {
             }
         });
 
-        setChartData(result);
+        return result;
     };
 
+    const chartData = processChartData(transactions);
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
