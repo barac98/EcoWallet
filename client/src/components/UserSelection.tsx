@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, Users } from 'lucide-react';
 import { useUser } from '../UserContext';
 
