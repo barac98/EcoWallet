@@ -40,12 +40,12 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
 ];
 
 export const INITIAL_SHOPPING_ITEMS: ShoppingItem[] = [
-    { id: '1', name: 'Organic Avocado', quantity: 3, checked: false, category: 'Groceries' },
-    { id: '2', name: 'Almond Milk', quantity: 1, checked: false, category: 'Groceries' },
-    { id: '3', name: 'Fresh Blueberries', quantity: 2, checked: false, category: 'Groceries' },
-    { id: '4', name: 'Sourdough Bread', quantity: 1, checked: false, category: 'Groceries' },
-    { id: '5', name: 'Greek Yogurt', quantity: 4, checked: true, category: 'Groceries' },
-    { id: '6', name: 'Sparkling Water', quantity: 6, checked: true, category: 'Groceries' }
+    { id: '1', name: 'Organic Avocado', quantity: 3, isPurchased: false, category: 'Groceries', addedBy: 'Mom' },
+    { id: '2', name: 'Almond Milk', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Dad' },
+    { id: '3', name: 'Fresh Blueberries', quantity: 2, isPurchased: false, category: 'Groceries', addedBy: 'Mom' },
+    { id: '4', name: 'Sourdough Bread', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Family' },
+    { id: '5', name: 'Greek Yogurt', quantity: 4, isPurchased: true, category: 'Groceries', addedBy: 'Mom', boughtBy: 'Mom' },
+    { id: '6', name: 'Sparkling Water', quantity: 6, isPurchased: true, category: 'Groceries', addedBy: 'Dad', boughtBy: 'Dad' }
 ];
 
 export const CHART_DATA: ChartData[] = [

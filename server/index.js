@@ -59,12 +59,12 @@ initFirebase();
 // In-Memory Fallback Store
 const memoryStore = {
     transactions: [
-        { id: '1', title: 'Starbucks Coffee', category: 'Food & Drinks', amount: 5.50, date: new Date().toISOString(), type: 'expense', icon: 'Coffee' },
-        { id: '2', title: 'Apple Subscription', category: 'Entertainment', amount: 12.99, date: new Date(Date.now() - 86400000).toISOString(), type: 'expense', icon: 'Music' }
+        { id: '1', title: 'Starbucks Coffee', category: 'Food & Drinks', amount: 5.50, date: new Date().toISOString(), type: 'expense', icon: 'Coffee', createdBy: 'Dad' },
+        { id: '2', title: 'Apple Subscription', category: 'Entertainment', amount: 12.99, date: new Date(Date.now() - 86400000).toISOString(), type: 'expense', icon: 'Music', createdBy: 'Mom' }
     ],
     shopping: [
-        { id: '1', name: 'Organic Avocado', quantity: 3, checked: false, category: 'Groceries' },
-        { id: '2', name: 'Almond Milk', quantity: 1, checked: false, category: 'Groceries' }
+        { id: '1', name: 'Organic Avocado', quantity: 3, isPurchased: false, category: 'Groceries', addedBy: 'Mom' },
+        { id: '2', name: 'Almond Milk', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Dad' }
     ]
 };
 
@@ -168,14 +168,15 @@ app.patch('/api/shopping/:id', async (req, res) => {
 app.delete('/api/shopping/clear-purchased', async (req, res) => {
     try {
         if (db) {
-            const snapshot = await db.collection('shopping').where('checked', '==', true).get();
+            // Updated to query for 'isPurchased' instead of 'checked'
+            const snapshot = await db.collection('shopping').where('isPurchased', '==', true).get();
             const batch = db.batch();
             snapshot.docs.forEach((doc) => {
                 batch.delete(doc.ref);
             });
             await batch.commit();
         } else {
-            memoryStore.shopping = memoryStore.shopping.filter(i => !i.checked);
+            memoryStore.shopping = memoryStore.shopping.filter(i => !i.isPurchased);
         }
         res.json({ success: true });
     } catch (e) {

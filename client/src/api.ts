@@ -33,6 +33,7 @@ async function fetchWithFallback<T>(endpoint: string, cacheKey: string, options?
 }
 
 export const api = {
+    // Transactions
     getTransactions: () => fetchWithFallback<Transaction[]>('/transactions', 'transactions'),
     
     addTransaction: async (transaction: Omit<Transaction, 'id'>) => {
@@ -56,12 +57,15 @@ export const api = {
         }
     },
 
+    // Shopping
     getShoppingItems: () => fetchWithFallback<ShoppingItem[]>('/shopping', 'shopping'),
 
     addShoppingItem: async (item: Omit<ShoppingItem, 'id'>) => {
         const payload = {
             ...item,
-            boughtBy: item.checked ? getCurrentUser() : null // unlikely to be checked on creation, but for safety
+            addedBy: getCurrentUser(),
+            isPurchased: false,
+            boughtBy: null
         };
 
         const res = await fetch(`${API_URL}/shopping`, {
@@ -72,11 +76,13 @@ export const api = {
         return res.json();
     },
 
-    toggleShoppingItem: async (id: string, checked: boolean) => {
-        const payload = { 
-            checked,
-            boughtBy: checked ? getCurrentUser() : null
-        };
+    updateShoppingItem: async (id: string, updates: Partial<ShoppingItem>) => {
+        const payload = { ...updates };
+        
+        // If checking/unchecking, update the 'boughtBy' field
+        if ('isPurchased' in updates) {
+            payload.boughtBy = updates.isPurchased ? getCurrentUser() : undefined; 
+        }
 
         await fetch(`${API_URL}/shopping/${id}`, {
             method: 'PATCH',

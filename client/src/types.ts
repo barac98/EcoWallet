@@ -14,7 +14,8 @@ export interface ShoppingItem {
     name: string;
     quantity: number;
     category?: string; // 'groceries' | 'electronics' etc
-    checked: boolean;
+    isPurchased: boolean;
+    addedBy?: string;
     boughtBy?: string;
 }
 
