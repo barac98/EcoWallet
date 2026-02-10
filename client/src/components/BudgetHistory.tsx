@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChevronLeft, SlidersHorizontal, ShoppingBag, DollarSign, Coffee, Clapperboard, Zap } from 'lucide-react';
 import { api } from '../api';
@@ -106,7 +106,7 @@ export const BudgetHistory = () => {
                         <Bar dataKey="income" stackId="a" fill="#13ec5b" radius={[10, 10, 10, 10]} />
                         <Bar dataKey="expense" stackId="b" fill="#334155" radius={[10, 10, 10, 10]}>
                             {
-                                chartData.map((entry, index) => (
+                                chartData.map((_, index) => (
                                 <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#13ec5b' : '#334155'} />
                                 ))
                             }

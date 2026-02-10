@@ -1,4 +1,3 @@
-import React from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Dashboard } from './components/Dashboard';
 import { ShoppingList } from './components/ShoppingList';
@@ -10,6 +9,7 @@ const BottomNavigation = () => {
     const location = useLocation();
     const navigate = useNavigate();
     
+    // Hide bottom nav on specific routes if needed, e.g., full screen modal
     if (location.pathname === '/add') return null;
 
     const isActive = (path: string) => location.pathname === path;
@@ -31,6 +31,7 @@ const BottomNavigation = () => {
                 <span className="text-[10px] font-bold">Shopping</span>
             </button>
             
+            {/* Floating Action Button Placeholder - Visual centered alignment */}
             <div className="w-12"></div>
 
             <button 
@@ -47,6 +48,7 @@ const BottomNavigation = () => {
                 <span className="text-[10px] font-bold">Profile</span>
             </button>
 
+            {/* Actual FAB positioned absolutely */}
             <button 
                 onClick={() => navigate('/add')}
                 className="absolute left-1/2 -translate-x-1/2 -top-6 w-14 h-14 bg-primary text-background-dark rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform"

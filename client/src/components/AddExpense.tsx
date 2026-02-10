@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Calendar, ChevronRight, CheckCircle, Delete, Loader2 } from 'lucide-react';
 import { EXPENSE_CATEGORIES } from '../constants';

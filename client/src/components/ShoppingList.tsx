@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Check, Plus, Loader2 } from 'lucide-react';
+import { Check, Plus, Loader2 } from 'lucide-react';
 import { ShoppingItem } from '../types';
 import { api } from '../api';
 
