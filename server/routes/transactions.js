@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCollection, addDocument } = require('../lib/db');
+const { getCollection, addDocument, updateDocument, deleteDocument } = require('../lib/db');
 
 /**
  * @swagger
@@ -68,6 +68,62 @@ router.post('/', async (req, res) => {
     try {
         const newTransaction = await addDocument('transactions', req.body);
         res.json(newTransaction);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * @swagger
+ * /transactions/{id}:
+ *   patch:
+ *     summary: Update a transaction
+ *     tags: [Transactions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Transaction'
+ *     responses:
+ *       200:
+ *         description: The updated transaction
+ */
+router.patch('/:id', async (req, res) => {
+    try {
+        const updated = await updateDocument('transactions', req.params.id, req.body);
+        res.json(updated);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+/**
+ * @swagger
+ * /transactions/{id}:
+ *   delete:
+ *     summary: Delete a transaction
+ *     tags: [Transactions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Deletion confirmation
+ */
+router.delete('/:id', async (req, res) => {
+    try {
+        const result = await deleteDocument('transactions', req.params.id);
+        res.json(result);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

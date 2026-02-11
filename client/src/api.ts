@@ -59,6 +59,24 @@ export const api = {
         return await res.json();
     },
 
+    updateTransaction: async (id: string, updates: Partial<Transaction>) => {
+        const res = await fetch(`${API_URL}/transactions/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        if(!res.ok) throw new Error("Failed to update transaction");
+        return await res.json();
+    },
+
+    deleteTransaction: async (id: string) => {
+        const res = await fetch(`${API_URL}/transactions/${id}`, {
+            method: 'DELETE'
+        });
+        if(!res.ok) throw new Error("Failed to delete transaction");
+        return await res.json();
+    },
+
     // --- Shopping ---
 
     getShoppingItems: () => fetchWithFallback<ShoppingItem[]>('/shopping', 'shopping'),

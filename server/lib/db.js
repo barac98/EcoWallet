@@ -108,6 +108,20 @@ const updateDocument = async (collectionName, id, data) => {
     }
 };
 
+const deleteDocument = async (collectionName, id) => {
+    if (db) {
+        await db.collection(collectionName).doc(id).delete();
+        return { id, deleted: true };
+    } else {
+        const idx = (memoryStore[collectionName] || []).findIndex(item => item.id === id);
+        if (idx !== -1) {
+            memoryStore[collectionName].splice(idx, 1);
+            return { id, deleted: true };
+        }
+        return { id, deleted: false };
+    }
+};
+
 // Upsert (Set with merge)
 const setDocument = async (collectionName, id, data) => {
     if (db) {
@@ -152,6 +166,7 @@ module.exports = {
     getDocument,
     addDocument,
     updateDocument,
+    deleteDocument,
     setDocument,
     clearPurchasedItems
 };
