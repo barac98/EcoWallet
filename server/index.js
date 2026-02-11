@@ -33,9 +33,14 @@ console.log(`📄 Swagger Docs available at http://localhost:${PORT}/api-docs`);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/shopping', shoppingRouter);
 
-// Health Check
+// Health Check (Root)
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
+});
+
+// API Health Check (For Server Wake-up)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
 });
 
 app.listen(PORT, () => {

@@ -6,6 +6,7 @@ import { AddExpense } from './components/AddExpense';
 import { LayoutGrid, Wallet, PieChart, User as UserIcon, Plus } from 'lucide-react';
 import { UserProvider, useUser } from './UserContext';
 import { UserSelection } from './components/UserSelection';
+import { ServerAwakeWrapper } from './components/ServerAwakeWrapper';
 
 const BottomNavigation = () => {
     const location = useLocation();
@@ -69,17 +70,19 @@ const AppContent = () => {
     }
 
     return (
-        <Router>
-            <div className="antialiased min-h-screen pb-24">
-                <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/shopping" element={<ShoppingList />} />
-                    <Route path="/history" element={<BudgetHistory />} />
-                    <Route path="/add" element={<AddExpense />} />
-                </Routes>
-                <BottomNavigation />
-            </div>
-        </Router>
+        <ServerAwakeWrapper>
+            <Router>
+                <div className="antialiased min-h-screen pb-24">
+                    <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/shopping" element={<ShoppingList />} />
+                        <Route path="/history" element={<BudgetHistory />} />
+                        <Route path="/add" element={<AddExpense />} />
+                    </Routes>
+                    <BottomNavigation />
+                </div>
+            </Router>
+        </ServerAwakeWrapper>
     );
 };
 
