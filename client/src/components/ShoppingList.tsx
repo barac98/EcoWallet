@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Check, Plus, Loader2, Minus, ShoppingBag, X } from 'lucide-react';
 import { ShoppingItem } from '../types';
 import { api } from '../api';
 import { useUser } from '../UserContext';
-import { useFirestore } from '../hooks/useFirestore';
 
 export const ShoppingList = () => {
     const { user } = useUser();
     
-    // Real-Time Data
-    // Sorted by created date implicitly or by name? 
-    // Using a default sort for consistent UI
-    const { data: items, loading } = useFirestore<ShoppingItem>('shopping');
+    // Data State
+    const [items, setItems] = useState<ShoppingItem[]>([]);
+    const [loading, setLoading] = useState(true);
     
     // Add Item Form State
     const [newItemName, setNewItemName] = useState('');
@@ -26,16 +24,34 @@ export const ShoppingList = () => {
     const [tripTotal, setTripTotal] = useState('');
     const [isSavingTrip, setIsSavingTrip] = useState(false);
 
-    // Optimistic UI handled by Firestore SDK for writes, so we just call API
-    // and wait for the real-time listener to update the list.
+    const loadItems = useCallback(async () => {
+        try {
+            const data = await api.getShoppingItems();
+            setItems(data);
+        } catch (error) {
+            console.error("Failed to load shopping items", error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadItems();
+    }, [loadItems]);
 
     const toggleItem = async (id: string, currentStatus: boolean) => {
+        // Optimistic Update
+        setItems(prev => prev.map(i => i.id === id ? { ...i, isPurchased: !currentStatus } : i));
         await api.updateShoppingItem(id, { isPurchased: !currentStatus });
+        loadItems(); // Re-sync to ensure consistency
     };
 
     const updateQuantity = async (id: string, newQty: number) => {
         if (newQty < 1) return;
+        // Optimistic Update
+        setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: newQty } : i));
         await api.updateShoppingItem(id, { quantity: newQty });
+        loadItems();
     };
 
     const handleAddItem = async (e: React.FormEvent) => {
@@ -52,12 +68,18 @@ export const ShoppingList = () => {
             addedBy: user || 'Family'
         };
 
-        await api.addShoppingItem(newItem);
-        
-        // Reset form
-        setNewItemName('');
-        setNewItemQuantity(1);
-        setIsAdding(false);
+        try {
+            await api.addShoppingItem(newItem);
+            await loadItems();
+            
+            // Reset form
+            setNewItemName('');
+            setNewItemQuantity(1);
+        } catch (error) {
+            console.error("Failed to add item", error);
+        } finally {
+            setIsAdding(false);
+        }
     };
 
     const handleCompleteTrip = async () => {
@@ -79,6 +101,7 @@ export const ShoppingList = () => {
 
         // 2. Clear Items from DB
         await api.clearPurchasedItems();
+        await loadItems();
         
         setIsSavingTrip(false);
         setIsCompletingTrip(false);

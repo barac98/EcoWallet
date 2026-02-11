@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Bell, 
@@ -11,11 +11,9 @@ import {
     Zap, 
     Loader2
 } from 'lucide-react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
 import { Transaction, ShoppingItem } from '../types';
 import { useUser } from '../UserContext';
-import { useFirestore } from '../hooks/useFirestore';
+import { api } from '../api';
 import { EditIncomeModal } from './EditIncomeModal';
 
 // --- Icon Helper ---
@@ -44,9 +42,11 @@ export const Dashboard = () => {
     const { user } = useUser();
     const navigate = useNavigate();
     
-    // Real-Time Data Hooks
-    const { data: transactions, loading: loadingTx } = useFirestore<Transaction>('transactions', 'date', 'desc');
-    const { data: shoppingItems } = useFirestore<ShoppingItem>('shopping');
+    // Data State
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+    const [monthlyIncome, setMonthlyIncome] = useState(0);
+    const [loading, setLoading] = useState(true);
     
     // UI State
     const [showIncomeModal, setShowIncomeModal] = useState(false);
@@ -56,23 +56,34 @@ export const Dashboard = () => {
     const currentMonth = currentMonthDate.getMonth();
     const currentYear = currentMonthDate.getFullYear();
 
-    // New: Fetch Monthly Income (Single Doc)
-    const [monthlyIncome, setMonthlyIncome] = useState(0);
+    const loadData = useCallback(async () => {
+        try {
+            const [txs, items] = await Promise.all([
+                api.getTransactions(),
+                api.getShoppingItems()
+            ]);
+            setTransactions(txs);
+            setShoppingItems(items);
 
-    useEffect(() => {
-        const month = String(currentMonth + 1).padStart(2, '0');
-        const docId = `${currentYear}-${month}`;
-        
-        const unsubscribe = onSnapshot(doc(db, 'incomes', docId), (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                setMonthlyIncome(docSnapshot.data().amount || 0);
-            } else {
-                setMonthlyIncome(0);
-            }
-        });
-
-        return () => unsubscribe();
+            const monthId = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const incomeData = await api.getIncome(monthId);
+            setMonthlyIncome(incomeData.amount || 0);
+        } catch (error) {
+            console.error("Failed to load dashboard data", error);
+        } finally {
+            setLoading(false);
+        }
     }, [currentMonth, currentYear]);
+
+    // Initial Load
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const handleIncomeUpdate = () => {
+        // Refresh data after modal close/save
+        loadData();
+    };
 
     const monthlyTransactions = useMemo(() => {
         return transactions.filter(t => {
@@ -80,11 +91,6 @@ export const Dashboard = () => {
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         });
     }, [transactions, currentMonth, currentYear]);
-
-    // Note: We now treat 'monthlyIncome' as the source of truth for Income,
-    // ignoring transactions with type='income' for the balance calculation to avoid double counting if mixed.
-    // However, if your legacy data has income transactions, you might want to hide them or migrate them.
-    // For this implementation, we purely use the new 'monthlyIncome' state for the Top Card.
 
     const totalExpense = monthlyTransactions
         .filter(t => t.type === 'expense')
@@ -107,7 +113,7 @@ export const Dashboard = () => {
         return 'Good Evening';
     };
 
-    if (loadingTx && transactions.length === 0) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-background-dark flex items-center justify-center">
                 <Loader2 className="animate-spin text-primary" size={32} />
@@ -129,7 +135,10 @@ export const Dashboard = () => {
                         <h1 className="text-xl font-bold">{user || 'Guest'}</h1>
                     </div>
                 </div>
-                <button className="w-10 h-10 rounded-full bg-surface-card border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                <button 
+                    onClick={loadData}
+                    className="w-10 h-10 rounded-full bg-surface-card border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
                     <Bell size={20} />
                 </button>
             </header>
@@ -151,7 +160,6 @@ export const Dashboard = () => {
                         </div>
                         <div className="flex items-center gap-2 relative z-10">
                             <h2 className="text-3xl font-bold tracking-tight">${monthlyIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h2>
-                            {/* Removed static percentage */}
                         </div>
                         
                         {/* Decorative background glow */}
@@ -255,6 +263,7 @@ export const Dashboard = () => {
                 onClose={() => setShowIncomeModal(false)}
                 currentIncome={monthlyIncome}
                 selectedMonth={currentMonthDate}
+                onSaveSuccess={handleIncomeUpdate}
             />
         </div>
     );

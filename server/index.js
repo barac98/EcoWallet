@@ -6,12 +6,12 @@ require('dotenv').config();
 const { initFirebase } = require('./lib/db');
 const transactionsRouter = require('./routes/transactions');
 const shoppingRouter = require('./routes/shopping');
+const incomeRouter = require('./routes/income');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS Configuration
-// Allows all origins by default or restricts to FRONTEND_URL if provided in env
 const corsOptions = {
     origin: process.env.FRONTEND_URL || '*', 
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -29,9 +29,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 console.log(`📄 Swagger Docs available at http://localhost:${PORT}/api-docs`);
 
 // --- Routes ---
-// These are properly namespaced with /api
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/shopping', shoppingRouter);
+app.use('/api/income', incomeRouter);
 
 // Health Check (Root)
 app.get('/health', (req, res) => {

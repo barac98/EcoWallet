@@ -16,7 +16,8 @@ const memoryStore = {
     shopping: [
         { id: '1', name: 'Organic Avocado', quantity: 3, isPurchased: false, category: 'Groceries', addedBy: 'Mom' },
         { id: '2', name: 'Almond Milk', quantity: 1, isPurchased: false, category: 'Groceries', addedBy: 'Dad' }
-    ]
+    ],
+    incomes: [] // Added for income storage
 };
 
 // Function to initialize Firebase
@@ -68,6 +69,18 @@ const getCollection = async (collectionName) => {
     }
 };
 
+const getDocument = async (collectionName, id) => {
+    if (db) {
+        const doc = await db.collection(collectionName).doc(id).get();
+        if (doc.exists) {
+            return { id: doc.id, ...doc.data() };
+        }
+        return null;
+    } else {
+        return (memoryStore[collectionName] || []).find(item => item.id === id) || null;
+    }
+}
+
 const addDocument = async (collectionName, data) => {
     if (db) {
         const docRef = await db.collection(collectionName).add(data);
@@ -95,6 +108,23 @@ const updateDocument = async (collectionName, id, data) => {
     }
 };
 
+// Upsert (Set with merge)
+const setDocument = async (collectionName, id, data) => {
+    if (db) {
+        await db.collection(collectionName).doc(id).set(data, { merge: true });
+        return { id, ...data };
+    } else {
+        if (!memoryStore[collectionName]) memoryStore[collectionName] = [];
+        const idx = memoryStore[collectionName].findIndex(item => item.id === id);
+        if (idx !== -1) {
+            memoryStore[collectionName][idx] = { ...memoryStore[collectionName][idx], ...data };
+        } else {
+            memoryStore[collectionName].push({ id, ...data });
+        }
+        return { id, ...data };
+    }
+};
+
 const clearPurchasedItems = async () => {
     if (db) {
         const snapshot = await db.collection('shopping').where('isPurchased', '==', true).get();
@@ -119,7 +149,9 @@ const clearPurchasedItems = async () => {
 module.exports = {
     initFirebase,
     getCollection,
+    getDocument,
     addDocument,
     updateDocument,
+    setDocument,
     clearPurchasedItems
 };

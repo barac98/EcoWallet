@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Loader2 } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { api } from '../api';
 
 interface EditIncomeModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentIncome: number;
     selectedMonth: Date;
+    onSaveSuccess?: () => void;
 }
 
-export const EditIncomeModal = ({ isOpen, onClose, currentIncome, selectedMonth }: EditIncomeModalProps) => {
+export const EditIncomeModal = ({ isOpen, onClose, currentIncome, selectedMonth, onSaveSuccess }: EditIncomeModalProps) => {
     const [amount, setAmount] = useState(currentIncome.toString());
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,11 +28,8 @@ export const EditIncomeModal = ({ isOpen, onClose, currentIncome, selectedMonth 
         const docId = `${year}-${month}`; // e.g., "2023-10"
 
         try {
-            await setDoc(doc(db, 'incomes', docId), {
-                amount: parseFloat(amount) || 0,
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
-            
+            await api.setIncome(docId, parseFloat(amount) || 0);
+            if (onSaveSuccess) onSaveSuccess();
             onClose();
         } catch (error) {
             console.error("Error saving income:", error);

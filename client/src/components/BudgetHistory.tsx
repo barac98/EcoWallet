@@ -1,11 +1,26 @@
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ChevronLeft, SlidersHorizontal, ShoppingBag, DollarSign, Coffee, Clapperboard, Zap } from 'lucide-react';
+import { ChevronLeft, SlidersHorizontal, ShoppingBag, DollarSign, Coffee, Clapperboard, Zap, Loader2 } from 'lucide-react';
 import { Transaction, ChartData } from '../types';
-import { useFirestore } from '../hooks/useFirestore';
+import { api } from '../api';
 
 export const BudgetHistory = () => {
-    // Real-Time Transactions
-    const { data: transactions } = useFirestore<Transaction>('transactions', 'date', 'desc');
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await api.getTransactions();
+                setTransactions(data);
+            } catch (error) {
+                console.error("Failed to load history", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
 
     const processChartData = (data: Transaction[]) => {
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -35,6 +50,14 @@ export const BudgetHistory = () => {
     const chartData = processChartData(transactions);
     const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-background-dark flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" size={32} />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-white px-6 pt-4 pb-32">
