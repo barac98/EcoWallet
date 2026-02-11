@@ -46,7 +46,7 @@ export const Dashboard = () => {
     
     // Real-Time Data Hooks
     const { data: transactions, loading: loadingTx } = useFirestore<Transaction>('transactions', 'date', 'desc');
-    const { data: shoppingItems, loading: loadingShop } = useFirestore<ShoppingItem>('shopping');
+    const { data: shoppingItems } = useFirestore<ShoppingItem>('shopping');
     
     // UI State
     const [showIncomeModal, setShowIncomeModal] = useState(false);
