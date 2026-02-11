@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, Loader2 } from 'lucide-react';
+import { config } from '../config';
 
 export const ServerAwakeWrapper = ({ children }: { children: React.ReactNode }) => {
     const [isServerReady, setIsServerReady] = useState(false);
@@ -20,10 +21,8 @@ export const ServerAwakeWrapper = ({ children }: { children: React.ReactNode }) 
 
         const checkHealth = async () => {
             try {
-                // Try to fetch health endpoint
-                // In development, this proxies to localhost:3001
-                // In production, it hits the relative path
-                const res = await fetch('/api/health', { signal: controller.signal });
+                // Fetch health endpoint using configured API Base URL
+                const res = await fetch(`${config.apiBaseUrl}/health`, { signal: controller.signal });
                 if (res.ok) {
                     if (isMounted) setIsServerReady(true);
                 } else {
