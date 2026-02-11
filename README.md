@@ -1,47 +1,59 @@
 # EcoWallet 🌿
 
-EcoWallet is a mobile-first, Progressive Web Application (PWA) designed to help families track expenses and manage shopping lists collaboratively. It features a modern dark-mode UI, offline capabilities, and data synchronization.
+EcoWallet is a modern, mobile-first **Progressive Web Application (PWA)** designed to simplify family budgeting and shopping. It combines a robust React frontend with a Node.js/Express backend and Firebase Firestore for real-time data synchronization.
+
+## ✨ Key Features
+
+*   **Real-Time Budgeting:** Track monthly income vs. expenses with visual progress bars and instant updates.
+*   **Smart Shopping List:** 
+    *   Collaborative list with quantity tracking.
+    *   **"Complete Trip" Workflow:** Seamlessly convert purchased items into a transaction record and clear the list in one tap.
+*   **Server Cold Start Detection:** Intelligent UI that detects if the backend (hosted on free tiers like Render) is sleeping and keeps the user informed while it wakes up.
+*   **Analytics:** visualize spending trends over the last 6 months.
+*   **Family Mode:** Simple profile switching (Mom, Dad, Family) to tag who added items or expenses.
+*   **Offline-First:** Fully installable PWA that caches assets for offline use.
 
 ## 📂 Project Structure
 
-This project is organized as a monorepo with clear separation between frontend and backend:
+This project is organized as a monorepo:
 
-*   **[Client (Frontend)](./client/README.md):** Documentation for the React application.
-*   **[Server (Backend)](./server/README.md):** Documentation for the Node.js API and Database.
+*   **[Client (Frontend)](./client/README.md):** React + Vite application.
+*   **[Server (Backend)](./server/README.md):** Node.js + Express API + Firebase Admin SDK.
 
 ## 🚀 Quick Start
 
 To get the full application running locally:
 
-1.  **Setup Server:**
-    Open a terminal, navigate to `server/`, and follow the [Server Instructions](./server/README.md).
-    ```bash
-    cd server
-    npm install
-    npm run dev
-    ```
+### 1. Setup Server
+Open a terminal, navigate to `server/`, and follow the [Server Instructions](./server/README.md).
+```bash
+cd server
+npm install
+npm run dev
+```
+*Server runs on `http://localhost:3001`*
 
-2.  **Setup Client:**
-    Open a *new* terminal, navigate to `client/`, and follow the [Client Instructions](./client/README.md).
-    ```bash
-    cd client
-    npm install
-    npm run dev
-    ```
+### 2. Setup Client
+Open a *new* terminal, navigate to `client/`, and follow the [Client Instructions](./client/README.md).
+```bash
+cd client
+npm install
+npm run dev
+```
+*Client runs on `http://localhost:5173`*
 
-3.  **Open App:**
-    Visit `http://localhost:5173` in your browser.
+### 3. Open App
+Visit `http://localhost:5173` in your browser.
 
-## 📚 API Documentation
+## 🛠 Tech Stack
 
-The backend includes a fully interactive Swagger UI to explore and test endpoints.
+*   **Frontend:** React 18, TypeScript, Tailwind CSS, Lucide Icons, Recharts.
+*   **Backend:** Node.js, Express, Swagger (OpenAPI).
+*   **Database:** Google Firebase Firestore (NoSQL).
+*   **Deployment:** Designed for static hosting (Client) and Node.js runtime (Server).
 
-*   **URL:** `http://localhost:3001/api-docs`
-*   **Features:** View schemas, test GET/POST/PATCH/DELETE requests directly in the browser.
-
-## 📱 Features
-*   **Expenses:** Track income and expenses with visual charts.
-*   **Shopping:** Real-time shopping list with quantities and "Complete Trip" workflow.
-*   **Family Mode:** Simple user switching profile system.
-*   **PWA:** Installable on mobile devices with offline support.
-*   **Dev Tools:** Integrated Swagger UI for API testing.
+## 📱 PWA Features
+This app is designed to be installed on mobile devices.
+*   **Manifest:** Custom app icon and splash screen properties.
+*   **Service Workers:** Caches static assets for instant loading.
+*   **Touch Optimizations:** Large touch targets, bottom navigation, and mobile-specific layouts.

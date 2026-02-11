@@ -1,114 +1,60 @@
 # EcoWallet Server 🖥️
 
-The backend for EcoWallet acts as an API layer between the frontend and the database (Firebase Firestore).
+The backend for EcoWallet acts as an API layer and data manager. It bridges the frontend with Firebase Firestore and provides utility endpoints.
 
 ## 🛠 Tech Stack
 
 *   **Runtime:** Node.js
 *   **Framework:** Express.js
-*   **Documentation:** Swagger (OpenAPI 3.0)
-*   **Database SDK:** Firebase Admin SDK
-*   **In-Memory Fallback:** The server automatically uses local memory storage if no Firebase credentials are provided.
+*   **Database:** Firebase Firestore (via `firebase-admin` SDK)
+*   **Docs:** Swagger (OpenAPI 3.0)
+
+## 🔌 API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Lightweight ping to wake up the server. Returns `200 OK`. |
+| `GET` | `/api/transactions` | Fetch all transactions. |
+| `POST` | `/api/transactions` | Create a new income/expense record. |
+| `GET` | `/api/shopping` | Fetch current shopping list. |
+| `POST` | `/api/shopping` | Add item to list. |
+| `PATCH` | `/api/shopping/:id` | Update item (toggle status, change quantity). |
+| `DELETE`| `/api/shopping/clear-purchased` | Batch delete all purchased items. |
+
+*Full interactive documentation available at `/api-docs` when server is running.*
 
 ## 🏃‍♂️ Getting Started
 
-### 1. Install Dependencies
+### 1. Install
 ```bash
 npm install
 ```
 
-### 2. Run Server
+### 2. Run Locally
 ```bash
 npm run dev
 ```
-The server runs on `http://localhost:3001`.
+Server runs on port `3001`.
 
-## 📚 API Documentation (Swagger)
+## 🔥 Database Connection
 
-Once the server is running, you can access the interactive Swagger UI to visualize and test the API:
+The server connects to Firestore using the **Admin SDK**, which bypasses client-side security rules. This allows the server to perform maintenance tasks (like batch deletion) securely.
 
-*   **URL:** [http://localhost:3001/api-docs](http://localhost:3001/api-docs)
-*   **Capabilities:**
-    *   Explore all available endpoints (`/transactions`, `/shopping`).
-    *   View detailed Request/Response schemas.
-    *   Execute API calls directly from the browser to test functionality.
-
-## 📂 Project Structure
-
-The server codebase is modularized for better scalability:
-
-*   `routes/`: Contains API route definitions (`transactions.js`, `shopping.js`).
-*   `lib/`: Shared utilities (`db.js` for database connection, `swagger.js` for config).
-*   `index.js`: Main entry point that mounts routes and middleware.
-
-## 🔥 Firebase Configuration
-
-To enable persistent data storage:
-
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Navigate to **Project Settings > Service Accounts**.
-3.  Generate a new Private Key.
-4.  **Option A (Local):** Save the file as `serviceAccountKey.json` in this `server/` directory.
-5.  **Option B (Production/Env):** Set the following environment variables in a `.env` file:
+### Setup
+1.  Place your `serviceAccountKey.json` in the `server/` root.
+2.  **OR** use Environment Variables (recommended for production):
     ```ini
-    FIREBASE_PROJECT_ID=your-project-id
-    FIREBASE_CLIENT_EMAIL=your-email@project.iam.gserviceaccount.com
+    FIREBASE_PROJECT_ID=...
+    FIREBASE_CLIENT_EMAIL=...
     FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
     ```
 
-## 🔒 Firestore Security Rules
+### Fallback Mode
+If no Firebase credentials are found, the server automatically defaults to an **In-Memory Database**. Data will persist only as long as the server process is running. This is useful for quick testing without setting up Firebase.
 
-Although the backend uses the Admin SDK (which bypasses rules), these rules define the expected data schema and validation logic. You can deploy these to your Firestore Console to ensure data integrity if you ever connect a client directly.
+## 🚀 Deployment (Render/Heroku)
 
-```javascript
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // --- Helper Functions ---
-    // Checks if a field is either missing (undefined) or is a String
-    function isOptionalString(field) {
-      return !((field in request.resource.data) && !(request.resource.data[field] is string));
-    }
-
-    // --- Transactions Collection ---
-    match /transactions/{transactionId} {
-      // Allow public access for Family Mode
-      allow read, delete: if true;
-      
-      // Enforce Schema on Create/Update
-      allow create, update: if 
-        request.resource.data.title is string &&
-        request.resource.data.amount is number &&
-        // Ensure type is strictly 'income' or 'expense'
-        (request.resource.data.type == 'income' || request.resource.data.type == 'expense') &&
-        request.resource.data.date is string &&
-        request.resource.data.category is string &&
-        request.resource.data.icon is string &&
-        // Optional metadata
-        isOptionalString('createdBy');
-    }
-
-    // --- Shopping List Collection ---
-    match /shopping/{itemId} {
-      allow read, delete: if true;
-      
-      // Enforce Schema on Create/Update
-      allow create, update: if 
-        request.resource.data.name is string &&
-        
-        // Quantity Validation
-        request.resource.data.quantity is number &&
-        request.resource.data.quantity >= 1 &&
-        
-        // Status Boolean
-        request.resource.data.isPurchased is bool &&
-        
-        // Optional metadata
-        isOptionalString('category') &&
-        isOptionalString('addedBy');
-    }
-  }
-}
-```
+This server is designed to be deployed as a Web Service.
+*   **Build Command:** `npm install`
+*   **Start Command:** `npm start`
+*   **Health Check Path:** `/api/health`
