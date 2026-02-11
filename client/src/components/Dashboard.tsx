@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Bell, 
@@ -9,14 +9,14 @@ import {
     DollarSign, 
     Music, 
     Zap, 
-    Loader2,
-    X,
-    Check
+    Loader2
 } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import { Transaction, ShoppingItem } from '../types';
-import { api } from '../api';
 import { useUser } from '../UserContext';
 import { useFirestore } from '../hooks/useFirestore';
+import { EditIncomeModal } from './EditIncomeModal';
 
 // --- Icon Helper ---
 const getIcon = (iconName: string) => {
@@ -48,15 +48,31 @@ export const Dashboard = () => {
     const { data: transactions, loading: loadingTx } = useFirestore<Transaction>('transactions', 'date', 'desc');
     const { data: shoppingItems, loading: loadingShop } = useFirestore<ShoppingItem>('shopping');
     
-    const loading = loadingTx || loadingShop;
-    
     // UI State
     const [showIncomeModal, setShowIncomeModal] = useState(false);
-    const [newIncomeAmount, setNewIncomeAmount] = useState('');
-
+    
     // --- Calculations ---
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    const currentMonthDate = useMemo(() => new Date(), []);
+    const currentMonth = currentMonthDate.getMonth();
+    const currentYear = currentMonthDate.getFullYear();
+
+    // New: Fetch Monthly Income (Single Doc)
+    const [monthlyIncome, setMonthlyIncome] = useState(0);
+
+    useEffect(() => {
+        const month = String(currentMonth + 1).padStart(2, '0');
+        const docId = `${currentYear}-${month}`;
+        
+        const unsubscribe = onSnapshot(doc(db, 'incomes', docId), (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                setMonthlyIncome(docSnapshot.data().amount || 0);
+            } else {
+                setMonthlyIncome(0);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [currentMonth, currentYear]);
 
     const monthlyTransactions = useMemo(() => {
         return transactions.filter(t => {
@@ -65,16 +81,17 @@ export const Dashboard = () => {
         });
     }, [transactions, currentMonth, currentYear]);
 
-    const totalIncome = monthlyTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
+    // Note: We now treat 'monthlyIncome' as the source of truth for Income,
+    // ignoring transactions with type='income' for the balance calculation to avoid double counting if mixed.
+    // However, if your legacy data has income transactions, you might want to hide them or migrate them.
+    // For this implementation, we purely use the new 'monthlyIncome' state for the Top Card.
 
     const totalExpense = monthlyTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const remainingBalance = totalIncome - totalExpense;
-    const spendPercentage = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 100) : 0;
+    const remainingBalance = monthlyIncome - totalExpense;
+    const spendPercentage = monthlyIncome > 0 ? Math.min((totalExpense / monthlyIncome) * 100, 100) : 0;
 
     const pendingShoppingCount = shoppingItems.filter(i => !i.isPurchased).length;
     const totalShoppingCount = shoppingItems.length;
@@ -90,26 +107,7 @@ export const Dashboard = () => {
         return 'Good Evening';
     };
 
-    // --- Handlers ---
-    const handleAddIncome = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const amount = parseFloat(newIncomeAmount);
-        if (!amount || amount <= 0) return;
-
-        await api.addTransaction({
-            title: 'Monthly Income',
-            amount: amount,
-            category: 'Income',
-            date: new Date().toISOString(),
-            type: 'income',
-            icon: 'DollarSign'
-        });
-
-        setShowIncomeModal(false);
-        setNewIncomeAmount('');
-    };
-
-    if (loading && transactions.length === 0) {
+    if (loadingTx && transactions.length === 0) {
         return (
             <div className="min-h-screen bg-background-dark flex items-center justify-center">
                 <Loader2 className="animate-spin text-primary" size={32} />
@@ -143,7 +141,7 @@ export const Dashboard = () => {
                     {/* Income Card */}
                     <div className="bg-surface-card rounded-3xl p-6 border border-white/5 relative overflow-hidden group">
                         <div className="flex justify-between items-start mb-2 relative z-10">
-                            <span className="text-slate-400 text-sm font-medium">Total Monthly Income</span>
+                            <span className="text-slate-400 text-sm font-medium">Total Monthly Budget</span>
                             <button 
                                 onClick={() => setShowIncomeModal(true)}
                                 className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-background-dark transition-all"
@@ -152,8 +150,8 @@ export const Dashboard = () => {
                             </button>
                         </div>
                         <div className="flex items-center gap-2 relative z-10">
-                            <h2 className="text-3xl font-bold tracking-tight">${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">+12%</span>
+                            <h2 className="text-3xl font-bold tracking-tight">${monthlyIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h2>
+                            {/* Removed static percentage */}
                         </div>
                         
                         {/* Decorative background glow */}
@@ -190,7 +188,7 @@ export const Dashboard = () => {
                     </div>
                     
                     <div className="space-y-3">
-                        {transactions.slice(0, 3).map(t => (
+                        {monthlyTransactions.slice(0, 3).map(t => (
                             <div key={t.id} className="bg-surface-card border border-white/5 p-4 rounded-3xl flex items-center justify-between group active:scale-[0.99] transition-transform">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${getCategoryColor(t.category)}`}>
@@ -210,7 +208,7 @@ export const Dashboard = () => {
                                 </span>
                             </div>
                         ))}
-                        {transactions.length === 0 && (
+                        {monthlyTransactions.length === 0 && (
                             <div className="text-center py-8 text-slate-500 text-sm bg-surface-card rounded-3xl border border-white/5">
                                 No recent activity
                             </div>
@@ -252,48 +250,12 @@ export const Dashboard = () => {
             </main>
 
             {/* --- Edit Income Modal --- */}
-            {showIncomeModal && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
-                    <div className="bg-surface-card w-full max-w-sm rounded-3xl p-6 border border-white/10 shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-white">Update Income</h2>
-                            <button 
-                                onClick={() => setShowIncomeModal(false)}
-                                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                        
-                        <form onSubmit={handleAddIncome}>
-                            <div className="mb-6">
-                                <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Add Income Amount</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-primary">$</span>
-                                    <input 
-                                        type="number" 
-                                        value={newIncomeAmount}
-                                        onChange={(e) => setNewIncomeAmount(e.target.value)}
-                                        placeholder="0.00"
-                                        autoFocus
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-10 pr-4 text-2xl font-bold text-white placeholder-slate-600 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-                                    />
-                                </div>
-                                <p className="text-xs text-slate-500 mt-2 ml-1">This will be added as a new transaction.</p>
-                            </div>
-
-                            <button 
-                                type="submit"
-                                disabled={!newIncomeAmount}
-                                className="w-full bg-primary text-background-dark font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50 hover:bg-primary-dark"
-                            >
-                                <Check size={20} />
-                                Confirm Income
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <EditIncomeModal 
+                isOpen={showIncomeModal}
+                onClose={() => setShowIncomeModal(false)}
+                currentIncome={monthlyIncome}
+                selectedMonth={currentMonthDate}
+            />
         </div>
     );
 };

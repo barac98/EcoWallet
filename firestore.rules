@@ -48,5 +48,10 @@ service cloud.firestore {
         isOptionalString('category') &&
         isOptionalString('addedBy');
     }
+
+    // --- Incomes Collection (Monthly Budget) ---
+    match /incomes/{docId} {
+        allow read, write: if true;
+    }
   }
 }
